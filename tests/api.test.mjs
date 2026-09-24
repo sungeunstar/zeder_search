@@ -1,0 +1,28 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
+import handler, { configured, rateAllowed } from '../api/chat.js';
+import { parseInput, generate, RESPONSE_SCHEMA } from '../lib/llm.js';
+const body=()=>({generationId:'test-generation-123',messages:[{role:'user',text:'도와주세요'}],plan:null});
+const env={OPENAI_API_KEY:'test-only',OPENAI_MODEL:'test-model',ZEDER_PREVIEW_KEY:'local-preview-code-123456'};
+test('live mode requires all server credentials and a strong preview code',()=>{assert.equal(configured({}),false);assert.equal(configured({OPENAI_API_KEY:'key'}),false);assert.equal(configured({...env,ZEDER_PREVIEW_KEY:'123'}),false);assert.equal(configured(env),true);});
+test('client cannot inject a system message',()=>{const b=body();b.messages[0].role='system';assert.throws(()=>parseInput(b));});
+test('oversize individual message is rejected',()=>{const b=body();b.messages[0].text='x'.repeat(6001);assert.throws(()=>parseInput(b));});
+test('input requires addressable generation identifier',()=>{const b=body();delete b.generationId;assert.throws(()=>parseInput(b));});
+test('schema response has no optional untyped execution outputs',()=>{assert.equal(RESPONSE_SCHEMA.additionalProperties,false);assert.deepEqual(RESPONSE_SCHEMA.required,['reply','quickReplies','plan']);});
+test('real adapter uses a fixed server endpoint and structured schema',async()=>{let payload;const fetcher=async(url,init)=>{assert.equal(url,'https://api.openai.com/v1/responses');payload=JSON.parse(init.body);assert.equal(init.headers.Authorization,'Bearer test-only');return{ok:true,json:async()=>({id:'response-test',status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify({reply:'어떤 제품인가요?',quickReplies:[],plan:null})}]}],usage:{input_tokens:10,output_tokens:20}})};};const result=await generate(parseInput(body()),env,fetcher);assert.equal(result.mode,'live');assert.equal(result.metadata.generationId,body().generationId);assert.equal(payload.store,false);assert.equal(payload.text.format.type,'json_schema');assert.equal(payload.model,'test-model');});
+test('model failure never becomes a fake successful demo response',async()=>{await assert.rejects(()=>generate(parseInput(body()),env,async()=>({ok:false,status:401})),/LLM 연결/);});
+test('incomplete output is rejected',async()=>{await assert.rejects(()=>generate(parseInput(body()),env,async()=>({ok:true,json:async()=>({status:'incomplete'})})),/끝까지/);});
+test('invalid model JSON is rejected',async()=>{await assert.rejects(()=>generate(parseInput(body()),env,async()=>({ok:true,json:async()=>({output:[{content:[{type:'output_text',text:'bad'}]}]})})),/형식/);});
+test('refusals are handled explicitly',async()=>{await assert.rejects(()=>generate(parseInput(body()),env,async()=>({ok:true,json:async()=>({output:[{content:[{type:'refusal'}]}]})})),/생성할 수 없/);});
+test('local best-effort rate limit is bounded',()=>{const k='test-'+Math.random();for(let i=0;i<12;i++)assert.equal(rateAllowed(k,10000),true);assert.equal(rateAllowed(k,10000),false);assert.equal(rateAllowed(k,71001),true);});
+test('HTTP handler behavior with real loopback HTTP',async t=>{const backup={};for(const k of Object.keys(env)){backup[k]=process.env[k];delete process.env[k];}const server=createServer(handler);await new Promise(r=>server.listen(0,'127.0.0.1',r));const url=`http://127.0.0.1:${server.address().port}/api/chat`;try{
+ await t.test('GET reports demo and no collaboration when unconfigured',async()=>{const r=await fetch(url);assert.equal(r.status,200);assert.deepEqual(await r.json(),{mode:'demo',storage:'browser',collaboration:false,externalExecution:false});});
+ await t.test('POST is disabled without credentials',async()=>assert.equal((await fetch(url,{method:'POST'})).status,503));
+ Object.assign(process.env,env);
+ await t.test('configured GET advertises live without exposing secrets',async()=>{const text=await(await fetch(url)).text();assert.match(text,/live/);assert.ok(!text.includes(env.OPENAI_API_KEY));});
+ await t.test('live calls require preview access code',async()=>assert.equal((await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body())})).status,401));
+ await t.test('cross-origin calls are rejected',async()=>assert.equal((await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','x-preview-key':env.ZEDER_PREVIEW_KEY,Origin:'https://untrusted.example'},body:JSON.stringify(body())})).status,403));
+ await t.test('malformed input fails before any provider call',async()=>assert.equal((await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','x-preview-key':env.ZEDER_PREVIEW_KEY},body:'bad json'})).status,400));
+ await t.test('unsupported method is rejected',async()=>assert.equal((await fetch(url,{method:'DELETE'})).status,405));
+ }finally{await new Promise(r=>server.close(r));for(const k of Object.keys(env))if(backup[k]===undefined)delete process.env[k];else process.env[k]=backup[k];}});
