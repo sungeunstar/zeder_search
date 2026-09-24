@@ -68,7 +68,7 @@ export function reviewRequest(thread, plan, note, expectedVersion) {
   const validated = validatePlan(plan); const version = thread.versions.length + 1;
   thread.versions.push({ version, plan: validated, source: 'marketer-demo', createdAt: new Date().toISOString() });
   thread.reviewedVersion = version; thread.status = 'reviewed';
-  thread.messages.push({ id: uid(), role: 'marketer', text: clean(note) || '전략을 검토했어요. 확인 후 실행 준비를 승인해 주세요.', version, quickReplies: [], createdAt: new Date().toISOString() });
+  thread.messages.push({ id: uid(), role: 'marketer', text: clean(note) || '검토 완료.', version, quickReplies: [], createdAt: new Date().toISOString() });
   thread.events.push({ kind: 'reviewed', label: '마케터 검토본 도착', at: new Date().toISOString() });
   return thread;
 }
@@ -94,12 +94,12 @@ export function demoReply(messages, priorPlan = null) {
       const plan = clone(priorPlan); plan.budget = /무료|없이|0원/.test(last) ? '유료 광고 없이 시작 (제안)' : plan.budget;
       plan.summary = `요청하신 변경을 반영해, 먼저 작은 범위의 반응을 확인하는 방향으로 조정했어요.`;
       plan.assumptions = [`추가 요청: ${clean(last,250)}`, '예시 모드의 규칙 기반 수정안입니다. 실제 LLM 분석이 아닙니다.'];
-      return { reply: '변경 요청을 반영한 예시 전략이에요. 이전 전략은 이력에 그대로 남겨 두었어요.', quickReplies: ['먼저 무엇을 확인하나요?', '메시지를 더 부담 없게 바꿔주세요'], plan };
+      return { reply: '수정한 전략이에요.', quickReplies: ['먼저 무엇을 확인하나요?', '메시지를 더 부담 없게 바꿔주세요'], plan };
     }
-    return { reply: '먼저 고객이 문제에 공감하는지 작은 범위에서 확인하는 방향이에요. 제안 아래의 도구를 누르면 준비할 내용을 볼 수 있어요. 지금은 예시 모드라 자유로운 추가 상담은 LLM 연결 후 가능해요.', quickReplies: ['유료 광고 없이 시작하도록 수정해 주세요'], plan: null };
+    return { reply: '먼저 고객이 문제에 공감하는지 확인해 보세요.', quickReplies: ['유료 광고 없이 시작하도록 수정해 주세요'], plan: null };
   }
-  if (users.length === 1) return { reply: '좋아요. 복잡한 마케팅 계획부터 세우지 않아도 괜찮아요.\n\n우선 어떤 사람에게 가장 먼저 알려 보고 싶으세요? 아직 모르시면 제가 가설부터 제안할게요.', quickReplies: ['누가 고객일지 함께 찾아주세요', '작은 팀을 운영하는 사람들', '우리 제품에 관심 있는 일반 소비자'], plan: null };
-  if (users.length === 2) return { reply: '첫 고객에 대한 가설부터 작게 확인해 볼게요.\n\n이번 시도에 쓸 수 있는 예산은 어느 정도인가요? 정해진 금액이 없어도 괜찮아요.', quickReplies: ['돈을 쓰기 전에 반응부터 볼래요', '10만원 안에서 시작하고 싶어요', '아직 정하지 못했어요'], plan: null };
+  if (users.length === 1) return { reply: '누구에게 먼저 알리고 싶으세요?', quickReplies: ['누가 고객일지 함께 찾아주세요', '작은 팀을 운영하는 사람들', '우리 제품에 관심 있는 일반 소비자'], plan: null };
+  if (users.length === 2) return { reply: '이번에 쓸 수 있는 예산은 어느 정도인가요?', quickReplies: ['돈을 쓰기 전에 반응부터 볼래요', '10만원 안에서 시작하고 싶어요', '아직 정하지 못했어요'], plan: null };
   const commerce = /쇼핑몰|소비자|브랜드|상품|판매/.test(text);
   const local = /매장|카페|미용실|식당|지역|필라테스/.test(text);
   const creator = /크리에이터|강의|콘텐츠|구독자/.test(text);
@@ -111,7 +111,7 @@ export function demoReply(messages, priorPlan = null) {
     { title: creator ? '첫 콘텐츠 공개하기' : '이야기로 관심 만들기', action: '제품이 해결하는 문제와 과정을 짧은 콘텐츠로 보여줘요.', reason: '직접 판매 제안과 다른 방식의 관심을 비교해 보기 위해서예요.', signal: '관련 질문 · 저장 · 자발적인 문의', tools: ['content','landing'] },
     { title: '고객의 진짜 이유 듣기', action: '관심을 보인 사람에게 짧은 대화를 제안하고 실제 경험을 들어요.', reason: '구매하지 않는 이유와 지금 사용하는 대안을 확인하기 위해서예요.', signal: '인터뷰 수락 · 현재 대안 · 해결 의지', tools: ['interview','tracker'] }
   ];
-  return { reply: '이렇게 시작해 보면 어떨까요?\n\n큰 캠페인 대신 하나의 목표를 확인하는 세 가지 작은 시도를 준비했어요. 필요한 도구도 함께 정리했으니, 직접 고르거나 설정할 필요 없어요.', quickReplies: [], plan: { title: '첫 고객을 만나는 작은 시작', business: clean(users[0].text,1000), audience, goal: '관심을 보이는 첫 고객과 대화를 시작하기', budget, summary: '누가 관심을 보이고, 어떤 제안에 반응하는지부터 확인해요.', hypothesis: '제품이 해결하는 문제를 구체적으로 제안하면, 관련 고객이 관심을 표현한다.', paths, assumptions: ['고객과 채널은 아직 검증 전인 가설이에요.', '위 전략은 화면 체험용 예시이며 시장조사 결과가 아니에요.'] } };
+  return { reply: '먼저 이 세 가지를 시도해 볼까요?', quickReplies: [], plan: { title: '첫 고객을 만나는 작은 시작', business: clean(users[0].text,1000), audience, goal: '관심을 보이는 첫 고객과 대화를 시작하기', budget, summary: '누가 관심을 보이고, 어떤 제안에 반응하는지부터 확인해요.', hypothesis: '제품이 해결하는 문제를 구체적으로 제안하면, 관련 고객이 관심을 표현한다.', paths, assumptions: ['고객과 채널은 아직 검증 전인 가설이에요.', '위 전략은 화면 체험용 예시이며 시장조사 결과가 아니에요.'] } };
 }
 export function artifactFor(plan, toolId) {
   if (!TOOLS[toolId]) throw new Error('도구를 찾을 수 없어요.');

@@ -1,0 +1,38 @@
+/* Copy-first refinement: keep the conversational flow, remove explanatory chrome. */
+.home-page {
+  min-height: calc(100dvh - 90px);
+  padding: clamp(90px, 17vh, 180px) 28px 48px;
+}
+.home-page h1 { font-size: 40px; line-height: 1.4; letter-spacing: -1.6px; }
+.home-page h1 span { color: var(--ink); }
+.home-input-wrap { width: 100%; margin: 32px auto 0; }
+.home-composer { box-shadow: none; border-radius: 16px; }
+.starter-prompts button { padding: 8px 16px; box-shadow: none; }
+.resume-row { margin-top: 28px; }
+.strategy-board, .path-card { box-shadow: none; }
+.strategy-top .eyebrow { color: var(--muted); }
+.strategy-summary { margin-bottom: 16px; }
+.goal-node { background: var(--soft); }
+.path-tools { margin-top: 4px; }
+.demo-notice { align-items: center; }
+.demo-notice a { padding-top: 0; }
+.composer-note { font-size: 10px; }
+.studio-sidebar .studio-nav { margin-top: 32px; }
+.studio-page-title h1 { overflow-wrap: anywhere; }
+.editor-footer { justify-content: flex-end; }
+.connection-setup { padding: 12px 0; }
+.connection-setup summary { cursor: pointer; }
+.connection-setup p { margin-top: 12px; overflow-wrap: anywhere; }
+@media (max-width: 800px) {
+  .home-page { min-height: calc(100dvh - 78px); }
+}
+@media (max-width: 600px) {
+  .home-page { min-height: calc(100dvh - 72px); padding: 72px 20px 32px; }
+  .home-page h1 { font-size: 30px; letter-spacing: -1px; }
+  .home-input-wrap { margin-top: 28px; }
+  .starter-prompts { gap: 8px; }
+  .starter-prompts button { padding: 7px 12px; }
+  .demo-notice { gap: 8px; }
+  .demo-notice a { margin-left: auto; }
+  .composer-note { font-size: 10px; }
+}

@@ -11,3 +11,7 @@
 - Use node:test for domain and API tests: npm test. Build: npm run build.
 - Offline browser QA: node scripts/preview.mjs && python tests/ui_smoke.py. It uses test adapters, not production server navigation.
 - Document incomplete integrations in README. Do not introduce a live paid endpoint without authentication and usage controls.
+
+- Keep customer UI copy minimal: questions, actual strategy content, actions and necessary status only. No slogans, process tutorials, redundant reassurance, English eyebrow copy, or explanations of how the UI works.
+- Preserve explicit demo labels, local-only storage/role limits, unverified research and external-action approval boundaries. Put implementation details in docs/settings, not onboarding.
+- LLM and demo replies should ask the next business question or state a short recommendation; do not narrate the interface or repeat the full strategy card.
