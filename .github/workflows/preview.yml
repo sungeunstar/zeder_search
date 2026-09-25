@@ -1,0 +1,31 @@
+name: Verify web preview
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --ignore-scripts --no-audit
+      - run: npm test
+      - run: npm run build
+      - name: Package source and runtime for reproducible browser verification
+        run: |
+          mkdir -p .artifacts
+          git archive --format=zip HEAD -o .artifacts/source.zip
+          cp -R node_modules/three .artifacts/three
+          cp -R dist .artifacts/dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-web-preview
+          path: .artifacts/
+          retention-days: 3
