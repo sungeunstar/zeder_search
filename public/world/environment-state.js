@@ -20,8 +20,8 @@ export function approachPhase(current,target,dt){
 }
 export function cameraOrbit(base,target,pointer,aspect=1){
  const dx=base[0]-target[0],dy=base[1]-target[1],dz=base[2]-target[2];
- const r=Math.hypot(dx,dy,dz),yaw=Math.atan2(dx,dz)+clamp(pointer[0],-1,1)*.082;
- const pitch=Math.asin(dy/r)+clamp(pointer[1],-1,1)*.025;
+ const r=Math.hypot(dx,dy,dz),yaw=Math.atan2(dx,dz)+clamp(pointer[0],-1,1)*(aspect<.8?.10:.24);
+ const pitch=Math.asin(dy/r)+clamp(pointer[1],-1,1)*.044;
  const rr=r*(aspect<.8?1:1);
  return [target[0]+Math.sin(yaw)*Math.cos(pitch)*rr,target[1]+Math.sin(pitch)*rr,target[2]+Math.cos(yaw)*Math.cos(pitch)*rr];
 }

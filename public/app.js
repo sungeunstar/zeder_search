@@ -46,13 +46,28 @@ function messageView(m,t) {
   const older=m.version&&m.version!==t.versions.length;
   return `<div class="message assistant-message"><div class="assistant-avatar ${m.role==='marketer'?'human':''}">${m.role==='marketer'?icon('person'):mark()}</div><div class="assistant-content"><span class="message-author">${m.role==='marketer'?'마케터 검토 · 체험':'ZEDER'}<small>${m.mode==='demo'?'예시 응답':''}</small></span><div class="message-text">${esc(m.text)}</div>${m.version?(older?`<details class="previous-plan"><summary>이전 전략 v${m.version} 보기 ${icon('down')}</summary>${board(t,m.version,false)}</details>`:board(t,m.version)):''}${m.id===t.messages.at(-1)?.id&&!busy.has(t.id)&&m.quickReplies?.length?`<div class="quick-replies">${m.quickReplies.map(q=>`<button data-action="quick" data-id="${t.id}" data-value="${esc(q)}">${esc(q)} ${icon('arrow')}</button>`).join('')}</div>`:''}</div></div>`;
 }
+function workActions(t){
+ if(t.status==='requested')return `<div class="dock-actions"><button class="dock-result" data-action="show-result" data-id="${t.id}">${icon('file')} 의뢰서 보기 ${icon('arrow')}</button><a class="dock-review" href="#/studio/${t.id}">검토 체험 ${icon('external')}</a></div><p class="dock-disclaimer">로컬 체험 · 실제 마케터 전달·결제 없음</p>`;
+ if(t.status==='reviewed')return `<div class="dock-actions"><button class="dock-result" data-action="show-result" data-id="${t.id}">${icon('file')} 검토본 확인 ${icon('arrow')}</button><button class="dock-review" data-action="revision" data-id="${t.id}">수정 요청</button><button class="dock-approve" data-action="approve" data-id="${t.id}">준비 승인</button></div><p class="dock-disclaimer">검토 체험 · 외부 실행 전</p>`;
+ return latestPlan(t)?`<div class="dock-actions"><button class="dock-result" data-action="show-result" data-id="${t.id}">${icon('file')} ${t.status==='preparing'?'실행 준비 확인':'전략 초안 보기'} <span>v${t.versions.length}</span>${icon('arrow')}</button></div>`:'';
+}
 function chatView(t) {
-  return `${header()}<main id="main" class="chat-page"><div class="chat-heading"><a class="back-link" href="#/">${icon('back')} 새 대화</a><div>${badge(t)}<button class="icon-button" data-action="export" data-id="${t.id}" aria-label="대화 내보내기" title="대화 내보내기">${icon('download')}</button></div></div>${t.status!=='draft'?`<a class="request-strip" href="#/request/${t.id}">${icon('inbox')} ${t.status==='reviewed'?'검토본 보기':'진행 상황'}${icon('arrow')}</a>`:''}<div class="conversation" aria-live="polite" aria-relevant="additions">${t.messages.map(m=>messageView(m,t)).join('')}${busy.has(t.id)?`<div class="thinking"><span class="thinking-dots"><i></i><i></i><i></i></span>${config.mode==='live'?'응답 작성 중':'예시 응답 작성 중'}</div>`:''}${t.error||t.pendingGeneration&&!busy.has(t.id)?`<div class="chat-error" role="alert">${icon('chat')}<span>${esc(t.error||'응답이 중단됐어요. 다시 시도해 주세요.')}</span><button class="text-button" data-action="retry" data-id="${t.id}">다시 시도</button></div>`:''}</div><div class="sticky-composer">${composer(t)}<p class="composer-note">${config.mode==='live'?'OpenAI API 전송 · ':''}이 브라우저에만 저장</p></div></main>`;
+ const waiting=busy.has(t.id),last=[...t.messages].reverse().find(m=>m.role!=='user'),user=[...t.messages].reverse().find(m=>m.role==='user');
+ const stopped=t.error||t.pendingGeneration&&!waiting;
+ const text=t.status==='requested'?'검토를 기다리고 있어요.':t.status==='reviewed'?'검토본을 확인해 주세요.':t.status==='preparing'?'승인한 전략으로 실행을 준비해요.':last?.text||'';
+ return `${header()}<main id="main" class="chat-page conversation-dock"><div class="dock-top"><a href="#/" aria-label="새 의뢰">${icon('plus')}</a><span class="dock-user" title="${esc(user?.text||'')}">${esc(user?.text||'')}</span><button data-action="history" data-id="${t.id}" class="dock-history">대화 기록 ${icon('clock')}</button></div><div class="conversation" aria-live="polite" aria-relevant="additions">${waiting?`<div class="thinking"><span class="thinking-dots"><i></i><i></i><i></i></span>${config.mode==='live'?'답변 작성 중':'예시 응답 작성 중'}</div>`:stopped?`<div class="chat-error" role="alert"><span>${esc(t.error||'응답이 중단됐어요.')}</span><button data-action="retry" data-id="${t.id}" class="text-button">다시 시도</button></div>`:`<div class="dock-reply"><span class="dock-author">${last?.mode==='demo'?'예시 응답':'ZEDER'}</span><div class="message-text">${esc(text)}</div></div>${last?.quickReplies?.length&&t.status==='draft'?`<div class="quick-replies">${last.quickReplies.map(q=>`<button data-action="quick" data-id="${t.id}" data-value="${esc(q)}">${esc(q)}</button>`).join('')}</div>`:''}${workActions(t)}`}</div><div class="sticky-composer">${composer(t)}<p class="composer-note">${config.mode==='live'?'OpenAI API 전송 · ':''}이 브라우저에만 저장</p></div></main>`;
+}
+function showResult(t){
+ if(!t||!latestPlan(t))return;
+ if(t.status==='draft')openModal('전략 초안',board(t,t.versions.length),'<button class="secondary" data-action="close-modal">공방으로 돌아가기</button>');
+ else openModal(t.status==='requested'?'검토 대기':t.status==='reviewed'?'검토본 확인':'실행 준비',progressDocument(t).replace(header(),'').replace('id="main"',''),'<button class="secondary" data-action="close-modal">공방으로 돌아가기</button>');
+ dialog.classList.add('result-dialog');
 }
 function requestsView() {
   return `${header()}<main id="main" class="requests-page"><div class="section-header"><div><h1>내 요청</h1></div><a class="primary" href="#/">새 요청 ${icon('plus')}</a></div>${workspace.threads.length?`<div class="request-list">${workspace.threads.map(t=>`<a class="request-row" href="#/${t.status==='draft'?'chat':'request'}/${t.id}"><span class="request-icon">${icon(t.status==='draft'?'chat':'file')}</span><div><h3>${esc(latestPlan(t)?.title??t.title)}</h3><p>${esc(t.title)}</p></div><div class="request-row-end">${badge(t)}<small>${time(t.updatedAt)}</small></div>${icon('chevron')}</a>`).join('')}</div>`:`<div class="empty-state">${icon('chat')}<h2>아직 요청이 없어요.</h2><a class="primary" href="#/">새 요청 ${icon('arrow')}</a></div>`}</main>`;
 }
-function progressView(t) {
+function progressView(t) {return chatView(t);}
+function progressDocument(t) {
   const reviewed=t.status==='reviewed', preparing=t.status==='preparing'; const v=preparing?t.approvedVersion:reviewed?t.reviewedVersion:t.submittedVersion; const p=versionPlan(t,v);
   if(!p) return chatView(t);
   const step=preparing?3:reviewed?2:1;
@@ -77,11 +92,11 @@ function render() {
   if(storageError) {app.innerHTML=`${header()}<main id="main" class="empty-state"><h1>저장된 대화를 확인해 주세요.</h1><p>${esc(storageError)}</p></main>`;return;}
   const r=route(); const t=thread(r.id);
   app.innerHTML=r.view==='studio'?(t?studioDetail(t):studioList()):r.view==='requests'?requestsView():r.view==='chat'&&t?chatView(t):r.view==='request'&&t?progressView(t):home();
-  syncWorld(document.querySelector('.home-page')?'home':r.view);
+  syncWorld(document.querySelector('.home-page')?'home':r.view,t,busy.has(t?.id));
   if(r.view==='chat')requestAnimationFrame(()=>{const c=$('.conversation');if(c)c.scrollTop=c.scrollHeight;});
   document.title=`${r.view==='studio'?'마케터 스튜디오':r.view==='chat'?'전략 대화':r.view==='request'?'요청 진행 상황':'마케팅 대화'} · ZEDER Search`;
 }
-function openModal(title,body,footer='') { dialog.innerHTML=`<div class="modal-head"><h2 id="dialog-title">${title}</h2><button class="icon-button" data-action="close-modal" aria-label="닫기">${icon('close')}</button></div><div class="modal-body">${body}</div>${footer?`<div class="modal-footer">${footer}</div>`:''}`; if(!dialog.open)dialog.showModal(); }
+function openModal(title,body,footer='') { dialog.className='';dialog.innerHTML=`<div class="modal-head"><h2 id="dialog-title">${title}</h2><button class="icon-button" data-action="close-modal" aria-label="닫기">${icon('close')}</button></div><div class="modal-body">${body}</div>${footer?`<div class="modal-footer">${footer}</div>`:''}`; if(!dialog.open)dialog.showModal(); }
 function settings() {
   openModal('연결 정보',`<div class="connection-status">${icon(config.mode==='live'?'check':'link')}<strong>${modeLabel()}</strong></div>${config.mode==='live'?`<form data-form="access"><label class="field"><span>테스트 접근 코드</span><input name="access" type="password" autocomplete="off" required placeholder="접근 코드"></label><button class="primary" type="submit">연결 ${icon('arrow')}</button></form>`:`<details class="connection-setup"><summary>서버 설정</summary><p><code>OPENAI_API_KEY</code> · <code>OPENAI_MODEL</code> · <code>ZEDER_PREVIEW_KEY</code></p><p>API 키는 서버에만 저장합니다.</p></details>`}<div class="privacy-summary"><strong>데이터·실행 범위</strong><p>대화·요청·검토는 이 브라우저에만 저장됩니다.</p><p>계정 간 협업·실제 마케터 전달·고객 탐색·발송·결제는 미연결입니다.</p><p>LLM 연결 시 대화·첨부는 OpenAI API로 전송됩니다. 비밀키·민감정보는 입력하지 마세요.</p></div>`, '<button class="secondary" data-action="close-modal">닫기</button>');
 }
@@ -102,6 +117,7 @@ async function runReply(t) {
       await new Promise((resolve,reject)=>{const timer=setTimeout(resolve,550);controller.signal.addEventListener('abort',()=>{clearTimeout(timer);reject(new DOMException('Aborted','AbortError'));},{once:true});});
       result={...demoReply(t.messages,latestPlan(t)),mode:'demo',metadata:{generationId,model:'demo-rules',createdAt:new Date().toISOString()}};
     }
+    if(controller.signal.aborted||busy.get(t.id)!==controller||t.pendingGeneration?.generationId!==generationId)throw new DOMException('Aborted','AbortError');
     addReply(t,result,result.mode,result.metadata);t.pendingGeneration=null;
   } catch(e) {t.error=e.name==='AbortError'?'응답 생성 중지 · 대화 저장됨':e.message;t.pendingGeneration=null;}
   finally {busy.delete(t.id);persist();render();scrollConversation();}
@@ -139,6 +155,8 @@ document.addEventListener('click',async e=>{
   const el=e.target.closest('[data-action]');if(!el)return;const action=el.dataset.action,id=el.dataset.id,t=thread(id);
   try {
     if(action==='settings')settings();
+    if(action==='show-result')showResult(t);
+    if(action==='history'){openModal('대화 기록',t.messages.map(m=>messageView(m,t)).join(''),`<button class="secondary" data-action="export" data-id="${t.id}">대화 내보내기</button>`);dialog.classList.add('history-dialog');}
     if(action==='close-modal')dialog.close();
     if(action==='starter'){drafts.set('new',el.dataset.value);render();$('#message')?.focus();}
     if(action==='quick')await send(el.dataset.value,id);
@@ -148,7 +166,7 @@ document.addEventListener('click',async e=>{
     if(action==='tool'){const tool=TOOLS[el.dataset.tool];openModal(tool.name,`<div class="tool-info-row"><span>결과물</span><strong>${tool.output}</strong></div><div class="tool-info-row"><span>상태</span><strong>${tool.ready?'승인 후 초안 준비':'조사 계획만 제공 · Runner 미연결'}</strong></div><div class="tool-info-row"><span>외부 실행</span><strong>미연결 · 별도 승인 필요</strong></div>`,`<button class="primary" data-action="close-modal">닫기</button>`);}
     if(action==='request'){const p=latestPlan(t);openModal('전략을 요청할까요?',`<div class="confirmation-summary"><span>목표</span><strong>${esc(p.goal)}</strong><span>타깃</span><strong>${esc(p.audience)}</strong><span>예산 범위</span><strong>${esc(p.budget)}</strong></div><div class="mini-note">체험 요청 · 실제 전달·결제·광고 집행 없음</div>`,`<button class="secondary" data-action="close-modal">취소</button><button class="primary" data-action="confirm-request" data-id="${id}">요청 확정 ${icon('arrow')}</button>`);}
     if(action==='confirm-request'){submitRequest(t);persist();dialog.close();go(`request/${id}`);window.scrollTo(0,0);}
-    if(action==='approve'){approveRequest(t);persist();render();toast('준비 승인됨 · 외부 실행 없음');}
+    if(action==='approve'){approveRequest(t);persist();dialog.close();render();toast('준비 승인됨 · 외부 실행 없음');}
     if(action==='revision'){openModal('수정 요청',`<form data-form="revision" data-id="${id}"><label class="field"><span>수정할 내용</span><textarea name="note" rows="4" maxlength="2000" required placeholder="변경할 내용을 남겨주세요."></textarea></label><button class="primary" type="submit">수정 요청 저장 ${icon('arrow')}</button></form>`);}
     if(action==='filter'){studioFilter=el.dataset.value;render();}
     if(action==='save-review'){const f=$('form[data-form=review]'),v=collectReview(f,t);t.reviewDraft=v;persist();toast('초안 저장됨 · 미제출');}
@@ -163,3 +181,5 @@ window.addEventListener('hashchange',()=>{render();window.scrollTo(0,0);});
 window.addEventListener('storage',e=>{if(savedEvent(e)&&!busy.size){try{workspace=load();render();}catch(err){toast(err.message);}}});
 render();
 if(location.protocol!=='file:'&&location.protocol!=='about:')fetch('/api/chat').then(r=>{if(!r.ok)throw new Error();return r.json();}).then(data=>{if(data.mode==='live'){config=data;render();}}).catch(()=>{/* Static/offline preview remains explicitly in demo mode. */});
+
+document.addEventListener('world-artifact-open',e=>{const r=route();if(['chat','request'].includes(r.view)&&r.id===e.detail?.threadId)showResult(thread(r.id));});

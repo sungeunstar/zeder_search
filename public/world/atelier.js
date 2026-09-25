@@ -45,7 +45,7 @@ export function createAtelier(host){
   else{
    const desired=reduced.matches?new T.Vector2():pointer;
    pointerLerp.lerp(desired,1-Math.exp(-Math.max(dt,.016)*3.0));
-   const shifted=finalPos.clone();if(view==='chat')shifted.z-=.65;
+   const shifted=finalPos.clone();if(['chat','request'].includes(view))shifted.z-=1.15;
    const orbit=cameraOrbit(shifted.toArray(),finalAim.toArray(),pointerLerp.toArray(),camera.aspect);
    camera.position.lerp(V(...orbit),1-Math.exp(-Math.max(dt,.016)*4.1));camera.lookAt(finalAim);
   }
@@ -59,27 +59,41 @@ export function createAtelier(host){
   scene.fog.color.copy(air.uniforms.uHorizon.value);shop.setNight(light.night);
   if(Math.abs(phase-lastLighting)>.001){renderer.shadowMap.needsUpdate=true;lastLighting=phase;}
 
-  grass.wind.value=time;shrubs.wind.value=time;forest.wind.value=time;air.uniforms.time.value=time;air.sky.position.copy(camera.position);shop.update(dt,time);gulls.update(time);
-  if(workState.stage==='thinking'&&frames%10===0)renderer.shadowMap.needsUpdate=true;
-  const focus=V(5.9,23.7,-1).sub(camera.position).dot(camera.getWorldDirection(V()));lens.uniforms.uFocus.value=focus;lens.uniforms.uAperture.value=mode==='intro'?.26:.62;lens.uniforms.uTime.value=time;lens.render(scene);frames++;host.dataset.frames=String(frames);
+  grass.wind.value=time;shrubs.wind.value=time;forest.wind.value=time;air.uniforms.time.value=time;air.sky.position.copy(camera.position);shop.update(dt,time,{reduce:reduced.matches});gulls.update(time);
+  if(['walk','receive','think','research','prepare','ready'].includes(shop.debug().activity.action)&&frames%5===0)renderer.shadowMap.needsUpdate=true;
+  const focus=V(5.9,23.7,-1).sub(camera.position).dot(camera.getWorldDirection(V()));lens.uniforms.uFocus.value=focus;lens.uniforms.uAperture.value=mode==='intro'?.26:.62;lens.uniforms.uTime.value=time;lens.render(scene);placeResultPin();frames++;host.dataset.frames=String(frames);
+ }
+ const pinPosition=V(),raycaster=new T.Raycaster();
+ function placeResultPin(){
+  const pin=document.getElementById('workbench-result');if(!pin)return;
+  const activity=shop.debug().activity;const available=active&&view!=='home'&&activity.resultAvailable;
+  pin.hidden=!available;if(!available)return;
+  shop.resultAnchor.getWorldPosition(pinPosition);pinPosition.project(camera);
+  pin.hidden=pinPosition.z>1||Math.abs(pinPosition.x)>1||Math.abs(pinPosition.y)>1;
+  pin.style.left=`${(pinPosition.x*.5+.5)*innerWidth}px`;pin.style.top=`${(-pinPosition.y*.5+.5)*innerHeight-21}px`;
+ }
+ function openResult(e){
+  if(e.button!==0||!shop.debug().activity.resultAvailable||e.target!==renderer.domElement)return;
+  raycaster.setFromCamera(new T.Vector2(e.clientX/innerWidth*2-1,1-e.clientY/innerHeight*2),camera);
+  if(raycaster.intersectObjects(shop.interactive,false).length)document.dispatchEvent(new CustomEvent('world-artifact-open',{detail:{threadId:workState.threadId}}));
  }
  function tick(now){raf=0;if(disposed||!active||document.hidden)return;if(reduced.matches!==lastReduced){reducedChanged();return;}const raw=(now-last)/1000,dt=Math.min(.08,Math.max(.001,raw));last=now;if(!paused){time+=dt;draw(dt);}else if(!frames)draw(0);if(frames>15&&raw>.095)slow++;else slow=Math.max(0,slow-1);if(slow>25&&renderer.getPixelRatio()>1){renderer.setPixelRatio(1);slow=0;resize();}if(!paused)raf=requestAnimationFrame(tick);}
- function setView(v){const wasActive=active;view=v;active=['home','chat'].includes(v);host.hidden=!active;document.body.classList.toggle('world-home',v==='home');document.body.classList.toggle('world-chat',v==='chat');if(v==='chat'&&mode==='intro')finish();last=performance.now();if(active&&!raf&&!paused)raf=requestAnimationFrame(tick);if(!active&&wasActive){cancelAnimationFrame(raf);raf=0;}}
+ function setView(v){const wasActive=active;view=v;active=['home','chat','request'].includes(v);host.hidden=!active;document.body.classList.toggle('world-home',v==='home');document.body.classList.toggle('world-chat',['chat','request'].includes(v));if(['chat','request'].includes(v)&&mode==='intro')finish();last=performance.now();if(active&&!raf&&!paused)raf=requestAnimationFrame(tick);if(!active&&wasActive){cancelAnimationFrame(raf);raf=0;}}
  function setState(next){const updated={...workState,...next};if(JSON.stringify(updated)===JSON.stringify(workState))return;workState=updated;shop.setState(workState);if(active&&paused)draw(0);}
- function pointerMove(e){if(e.pointerType==='touch'||reduced.matches||paused)return;pointer.set(clamp(e.clientX/innerWidth*2-1,-1,1),clamp(1-e.clientY/innerHeight*2,-1,1));}
+ function pointerMove(e){if(e.pointerType==='touch'||reduced.matches||paused||document.querySelector('dialog[open]')||e.target.closest?.('.chat-page,.site-header,.time-controls,#workbench-result'))return;pointer.set(clamp(e.clientX/innerWidth*2-1,-1,1),clamp(1-e.clientY/innerHeight*2,-1,1));}
  function pointerReset(){pointer.set(0,0);}
  function setTimeOfDay(value,immediate=false){if(!Object.hasOwn(TIME_PRESETS,value))return false;preset=value;targetPhase=TIME_PRESETS[value];if(immediate||paused||reduced.matches)phase=targetPhase;try{localStorage.setItem('zeder.scene.time.v1',value);}catch{}status();if(active)draw(0);return true;}
  function visibility(){last=performance.now();if(document.hidden){cancelAnimationFrame(raf);raf=0;}else if(active&&!paused&&!raf)raf=requestAnimationFrame(tick);}
  function contextLost(e){e.preventDefault();active=false;cancelAnimationFrame(raf);raf=0;document.body.classList.add('world-unavailable');host.dataset.state='lost';document.dispatchEvent(new CustomEvent('world-error',{detail:'3D 연결이 끊겼습니다. 대화는 사용할 수 있습니다.'}));}
  function reducedChanged(){lastReduced=reduced.matches;paused=lastReduced;cancelAnimationFrame(raf);raf=0;last=performance.now();if(paused){pointer.set(0,0);pointerLerp.set(0,0);phase=targetPhase;finish();if(active)draw(0);}else if(active)raf=requestAnimationFrame(tick);document.dispatchEvent(new CustomEvent('world-motion',{detail:{paused}}));}
- const listeners=[[window,'resize',resize],[window,'pointermove',pointerMove],[document,'pointerleave',pointerReset],[window,'blur',pointerReset],[document,'visibilitychange',visibility],[renderer.domElement,'webglcontextlost',contextLost]];listeners.forEach(([el,e,fn])=>el.addEventListener(e,fn));reduced.addEventListener('change',reducedChanged);
+ const listeners=[[renderer.domElement,'click',openResult],[window,'resize',resize],[window,'pointermove',pointerMove],[document,'pointerleave',pointerReset],[window,'blur',pointerReset],[document,'visibilitychange',visibility],[renderer.domElement,'webglcontextlost',contextLost]];listeners.forEach(([el,e,fn])=>el.addEventListener(e,fn));reduced.addEventListener('change',reducedChanged);
  // Keep accessibility preferences in sync while the animation loop is asleep.
  const motionWatch=setInterval(()=>{if(!disposed&&active&&!document.hidden&&reduced.matches!==lastReduced)reducedChanged();},750);
  try{if(reduced.matches||sessionStorage.getItem('zeder-atelier-seen'))finish();}catch{}
  resize();draw(0);status();host.dataset.ready='true';document.body.classList.add('world-ready');if(!paused)raf=requestAnimationFrame(tick);
  return {setView,setState,setTimeOfDay,skip(){finish();draw(0);},replay(){mode='intro';elapsed=0;paused=false;status();last=performance.now();if(!raf)raf=requestAnimationFrame(tick);},togglePause(){paused=!paused;if(paused&&mode==='intro')finish();last=performance.now();if(!paused&&!raf&&active)raf=requestAnimationFrame(tick);draw(0);return paused;},
   debug(){return {engine:'Three.js',revision:T.REVISION,mode,paused,active,frames,scene:'seaside-workshop',quality:lightGeometry?'light':'full',grassBlades:grass.mesh.count,leaves:forest.count,shoreShrubs:shrubs.count,terrain:"continuous-heightfield",camera:camera.position.toArray(),pointer:pointerLerp.toArray(),pointerTarget:pointer.toArray(),reducedMotion:reduced.matches,timeOfDay:preset,phase,night:light?.night??0,water:air.debug(),workshop:shop.debug(),drawCalls:lens.stats.calls,triangles:lens.stats.triangles,webgl:renderer.getContext().getParameter(renderer.getContext().VERSION)};},
-  seek(s){paused=true;mode='intro';elapsed=clamp(s,0,5);time=s;if(s>=5)finish();status();draw(0);},advance(s){paused=true;time+=s;draw(s);},testPointer(x,y){pointer.set(clamp(x,-1,1),clamp(y,-1,1));pointerLerp.copy(pointer);const p=cameraOrbit(finalPos.toArray(),finalAim.toArray(),pointer.toArray(),camera.aspect);camera.position.set(...p);camera.lookAt(finalAim);lens.render(scene);},
+  seek(s){paused=true;mode='intro';elapsed=clamp(s,0,5);time=s;if(s>=5)finish();status();draw(0);},advance(s){if(!Number.isFinite(s)||s<0||s>60)throw new TypeError('Advance expects 0..60 seconds');paused=true;for(let left=s;left>0;left-=.05){const dt=Math.min(.05,left);time+=dt;shop.update(dt,time,{reduce:reduced.matches});}renderer.shadowMap.needsUpdate=true;draw(0);},testPointer(x,y){pointer.set(clamp(x,-1,1),clamp(y,-1,1));pointerLerp.copy(pointer);const p=cameraOrbit(finalPos.toArray(),finalAim.toArray(),pointer.toArray(),camera.aspect);camera.position.set(...p);camera.lookAt(finalAim);lens.render(scene);},
   dispose(){disposed=true;clearInterval(motionWatch);cancelAnimationFrame(raf);listeners.forEach(([el,e,fn])=>el.removeEventListener(e,fn));reduced.removeEventListener('change',reducedChanged);const gs=new Set(),ms=new Set(),ts=new Set();scene.traverse(o=>{if(o.geometry)gs.add(o.geometry);for(const m of(Array.isArray(o.material)?o.material:o.material?[o.material]:[])){ms.add(m);for(const v of Object.values(m))if(v?.isTexture)ts.add(v);}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());ts.forEach(t=>t.dispose());lens.dispose();renderer.dispose();host.replaceChildren();}
  };
 }
