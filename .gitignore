@@ -12,3 +12,7 @@ preview-artifacts/
 qa/
 browser-artifacts/
 standalone-island.html
+
+# Deterministic, licensed assets generated at build time
+public/world/surface-data.js
+public/world/rounded-box.js

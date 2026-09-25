@@ -1,3 +1,4 @@
+import './prepare-surfaces.mjs';
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {resolve,dirname,relative} from 'node:path';
 import {fileURLToPath} from 'node:url';

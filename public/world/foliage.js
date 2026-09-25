@@ -12,11 +12,11 @@ export function trees(scene,m,mobile=false,customLayout=null){
  for(const [x,z,s] of layout){const y=ground(x,z),root=V(x,y,z);branch(root,root.clone().add(V(.22*s,3.05*s,.13)),.48*s,3,s);
   for(let i=0;i<5;i++){const a=i*1.256;wood.beam([x+Math.cos(a)*.72*s,y-.05,z+Math.sin(a)*.72*s],[x,y+.6*s,z],.12*s,'#847864');}}
  wood.mesh(m.bark,scene);
- const per=mobile?32:90,count=leaves.length*per,mesh=new T.InstancedMesh(leafGeometry(),m.leaves,count),obj=new T.Object3D(),cc=new T.Color();let k=0;
+ const per=mobile?80:145,count=leaves.length*per,mesh=new T.InstancedMesh(leafGeometry(),m.leaves,count),obj=new T.Object3D(),cc=new T.Color();let k=0;
  for(const {center,scale} of leaves)for(let j=0;j<per;j++){
   const a=rnd()*6.283,c=rnd()*2-1,r=Math.cbrt(rnd())*(.8+rnd()*.6)*scale,ss=Math.sqrt(1-c*c);
-  obj.position.copy(center).add(V(Math.cos(a)*r*ss,c*r*.85,Math.sin(a)*r*ss));obj.rotation.set(rnd()*Math.PI,rnd()*Math.PI*2,rnd()*Math.PI*2);const size=(.42+rnd()*.48)*scale;obj.scale.set(size,size,size);obj.updateMatrix();mesh.setMatrixAt(k,obj.matrix);
-  cc.setHSL(.23+rnd()*.07,.30+rnd()*.20,.12+rnd()*.15);mesh.setColorAt(k++,cc);
+  obj.position.copy(center).add(V(Math.cos(a)*r*ss,c*r*.85,Math.sin(a)*r*ss));obj.rotation.set(rnd()*Math.PI,rnd()*Math.PI*2,rnd()*Math.PI*2);const size=(.48+rnd()*.41)*scale;obj.scale.set(size,size,size);obj.updateMatrix();mesh.setMatrixAt(k,obj.matrix);
+  cc.setHSL(.23+rnd()*.07,.30+rnd()*.20,.145+rnd()*.145);mesh.setColorAt(k++,cc);
  }
  mesh.name='individual wind animated leaves';mesh.castShadow=true;mesh.receiveShadow=true;mesh.frustumCulled=false;scene.add(mesh);const wind=windMaterial(m.leaves,{strength:.07,speed:.78});
  return {mesh,wind,count};

@@ -1,3 +1,4 @@
+import './prepare-surfaces.mjs';
 import { vendorThree } from './vendor.mjs';
 await vendorThree();
 import { cp, mkdir, rm, readdir } from 'node:fs/promises';

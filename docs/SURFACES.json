@@ -1,0 +1,71 @@
+{
+  "license": "CC0-1.0",
+  "licenseUrl": "https://polyhaven.com/license",
+  "assets": [
+    {
+      "id": "aerial_grass_rock",
+      "map": "diff",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_grass_rock/aerial_grass_rock_diff_1k.jpg",
+      "sha256": "57b8041bfe0d0f01430e4dbaad45e7ddddf0a9fc97317f90dbc51f7b0d9e1b5d",
+      "bytes": 666655,
+      "source": "https://polyhaven.com/a/aerial_grass_rock"
+    },
+    {
+      "id": "aerial_grass_rock",
+      "map": "nor_gl",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_grass_rock/aerial_grass_rock_nor_gl_1k.jpg",
+      "sha256": "1aa3e23bff453f152e089b9f83aa36b4901651e019f7e2ca01d5331a9bbbda78",
+      "bytes": 904956,
+      "source": "https://polyhaven.com/a/aerial_grass_rock"
+    },
+    {
+      "id": "rock_face",
+      "map": "diff",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_face/rock_face_diff_1k.jpg",
+      "sha256": "cce4b50517161264bdef196f5e247e328ca3739083cd6044ad3cc54d88cb82e2",
+      "bytes": 732721,
+      "source": "https://polyhaven.com/a/rock_face"
+    },
+    {
+      "id": "rock_face",
+      "map": "nor_gl",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_face/rock_face_nor_gl_1k.jpg",
+      "sha256": "e2682e1286c8b6aca7e01ba7b8fe1726cb6606042b9ee70d097aa67470d410ef",
+      "bytes": 1139857,
+      "source": "https://polyhaven.com/a/rock_face"
+    },
+    {
+      "id": "wooden_rough_planks",
+      "map": "diff",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wooden_rough_planks/wooden_rough_planks_diff_1k.jpg",
+      "sha256": "b88237a8776bf699af773958375dde98a95a417be889cd1b7d78f5b12f76a850",
+      "bytes": 715565,
+      "source": "https://polyhaven.com/a/wooden_rough_planks"
+    },
+    {
+      "id": "wooden_rough_planks",
+      "map": "nor_gl",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wooden_rough_planks/wooden_rough_planks_nor_gl_1k.jpg",
+      "sha256": "0fc426c5469e673a9ce5d13d3386a94c885b828589d2881ae6fdf53ebf4588ce",
+      "bytes": 404529,
+      "source": "https://polyhaven.com/a/wooden_rough_planks"
+    },
+    {
+      "id": "tree_bark_03",
+      "map": "diff",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/tree_bark_03/tree_bark_03_diff_1k.jpg",
+      "sha256": "2b48c669a1787d708b1c10b3c726fddf9007099d5eb8873e316d388a8079a12b",
+      "bytes": 1046404,
+      "source": "https://polyhaven.com/a/tree_bark_03"
+    },
+    {
+      "id": "tree_bark_03",
+      "map": "nor_gl",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/tree_bark_03/tree_bark_03_nor_gl_1k.jpg",
+      "sha256": "36d355a7cb1d5158aa4ae8d36792ec1a4e47434063d7d13d0c56dfeb805c237f",
+      "bytes": 1255491,
+      "source": "https://polyhaven.com/a/tree_bark_03"
+    }
+  ],
+  "generatedSha256": "857aee7251ae41d0825d052451084ad249ccf0e90b1c9109b1efa5d806d2ed55"
+}

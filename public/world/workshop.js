@@ -6,9 +6,9 @@ import {random,ground,HOUSE} from './math.js';
 export function createWorkshop(scene,m){
  const root=new T.Group();root.name='Seaside strategy workshop';root.position.set(HOUSE.x,ground(HOUSE.x,HOUSE.z)+.02,HOUSE.z);scene.add(root);
  const rnd=random(212),wood=new Batch(),planks=new Batch(),stone=new Batch(),roof=new Batch(),metal=new Batch(),paper=new Batch(),colored=new Batch();
- const timber=new T.MeshStandardMaterial({color:'#88623d',map:m.timber.map,bumpMap:m.timber.map,bumpScale:.045,roughness:.83});
- const boardMat=new T.MeshStandardMaterial({color:'#b68a55',map:m.boards.map,bumpMap:m.boards.map,bumpScale:.025,roughness:.88});
- const tileMat=new T.MeshStandardMaterial({color:'#d0dceb',vertexColors:true,map:m.boards.map,bumpMap:m.boards.map,bumpScale:.027,roughness:.88});
+ const timber=new T.MeshStandardMaterial({color:'#ddbb91',map:m.timber.map,normalMap:m.timber.normalMap,normalScale:new T.Vector2(.65,.65),roughness:.83});
+ const boardMat=new T.MeshStandardMaterial({color:'#efd0a2',map:m.boards.map,normalMap:m.boards.normalMap,normalScale:new T.Vector2(.5,.5),roughness:.88});
+ const tileMat=new T.MeshStandardMaterial({color:'#ddd6bf',vertexColors:true,map:texture('rock',38),bumpScale:.025,roughness:.88});
  const white=new T.MeshStandardMaterial({color:'#eee3c7',roughness:.91,side:T.DoubleSide});
  const colorMat=new T.MeshStandardMaterial({vertexColors:true,roughness:.82});
  function obj(g,mat,p,scale=[1,1,1],rot=[0,0,0],parent=root){const o=new T.Mesh(g,mat);o.position.set(...p);o.scale.set(...scale);o.rotation.set(...rot);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;}
@@ -43,7 +43,7 @@ export function createWorkshop(scene,m){
   for(let row=0;row<13;row++)for(let col=0;col<17;col++){
    const d=.04+row*slope/12.4,zz=(col-8)*.456+(row%2)*.23;
    const mat=basis.clone();mat.setPosition(side*Math.cos(angle)*d,peak+.055-Math.sin(angle)*d+(13-row)*.008,zz+.1);
-   roof.add(tile,mat,new T.Color().setHSL(.59+rnd()*.035,.105+rnd()*.045,.19+rnd()*.13));
+   roof.add(tile,mat,new T.Color().setHSL(.59+rnd()*.035,.105+rnd()*.045,.23+rnd()*.14));
   }
  }
  // Rounded ridge caps.
