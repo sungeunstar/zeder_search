@@ -39,3 +39,7 @@ window.addEventListener('pagehide',()=>world?.setView('off'));window.addEventLis
 document.addEventListener('click',e=>{const b=e.target.closest('[data-time]');if(!b||!world)return;world.setTimeOfDay(b.dataset.time);controls();});
 
 document.addEventListener('world-motion',()=>controls());
+
+// Returning to conversation must not leave a modal covering the composer.
+document.addEventListener('click',e=>{if(e.target.closest('[data-action="revise-chat"],dialog [data-action="quick"]'))document.getElementById('dialog')?.close();},true);
+window.addEventListener('hashchange',()=>document.getElementById('dialog')?.close());
