@@ -33,3 +33,7 @@ test('Scene observes reduced motion, pointerleave, time preference and honest wo
 test('Day/night scene uses same atmosphere in sea reflection; no backdrop photo',async()=>{
  const src=await readFile('public/world/atmosphere.js','utf8');assert.match(src,/spectrumGLSL/);assert.match(src,/wp.xz\+=displacement/);assert.match(src,/skyColor\(R\)/);assert.match(src,/uMoonDir/);assert.doesNotMatch(src,/TextureLoader|\.jpg|\.mp4/);
 });
+
+test('Changed motion preference is reconciled even if the browser delays its change event',async()=>{
+ const s=await readFile('public/world/atelier.js','utf8');assert.match(s,/reduced.matches!==lastReduced/);assert.match(s,/cancelAnimationFrame\(raf\);raf=0;last=performance.now\(\);if\(paused\)/);assert.match(s,/pointerLerp.set\(0,0\)/);
+});

@@ -35,6 +35,7 @@ export function createAtelier(host){
  const pointer=new T.Vector2(),pointerLerp=new T.Vector2();
  let preset=DEFAULT_TIME;try{const saved=localStorage.getItem('zeder.scene.time.v1');if(Object.hasOwn(TIME_PRESETS,saved))preset=saved;}catch{}
  let phase=TIME_PRESETS[preset],targetPhase=phase,lastLighting=-1,light=null;
+ let lastReduced=reduced.matches;
  let active=true,paused=reduced.matches,mode='intro',elapsed=0,time=0,last=performance.now(),raf=0,frames=0,disposed=false,view='home',slow=0,workState={stage:'idle'};
  function status(){document.body.dataset.timeOfDay=preset;document.body.dataset.worldPhase=mode;host.dataset.renderer='three-r169';host.dataset.state=mode;}
  function finish(){mode='home';elapsed=5;camera.position.copy(finalPos);camera.lookAt(finalAim);status();try{sessionStorage.setItem('zeder-atelier-seen','1');}catch{}}
@@ -62,7 +63,7 @@ export function createAtelier(host){
   if(workState.stage==='thinking'&&frames%10===0)renderer.shadowMap.needsUpdate=true;
   const focus=V(5.9,23.7,-1).sub(camera.position).dot(camera.getWorldDirection(V()));lens.uniforms.uFocus.value=focus;lens.uniforms.uAperture.value=mode==='intro'?.26:.62;lens.uniforms.uTime.value=time;lens.render(scene);frames++;host.dataset.frames=String(frames);
  }
- function tick(now){raf=0;if(disposed||!active||document.hidden)return;const raw=(now-last)/1000,dt=Math.min(.08,Math.max(.001,raw));last=now;if(!paused){time+=dt;draw(dt);}else if(!frames)draw(0);if(frames>15&&raw>.095)slow++;else slow=Math.max(0,slow-1);if(slow>25&&renderer.getPixelRatio()>1){renderer.setPixelRatio(1);slow=0;resize();}if(!paused)raf=requestAnimationFrame(tick);}
+ function tick(now){raf=0;if(disposed||!active||document.hidden)return;if(reduced.matches!==lastReduced){reducedChanged();return;}const raw=(now-last)/1000,dt=Math.min(.08,Math.max(.001,raw));last=now;if(!paused){time+=dt;draw(dt);}else if(!frames)draw(0);if(frames>15&&raw>.095)slow++;else slow=Math.max(0,slow-1);if(slow>25&&renderer.getPixelRatio()>1){renderer.setPixelRatio(1);slow=0;resize();}if(!paused)raf=requestAnimationFrame(tick);}
  function setView(v){const wasActive=active;view=v;active=['home','chat'].includes(v);host.hidden=!active;document.body.classList.toggle('world-home',v==='home');document.body.classList.toggle('world-chat',v==='chat');if(v==='chat'&&mode==='intro')finish();last=performance.now();if(active&&!raf&&!paused)raf=requestAnimationFrame(tick);if(!active&&wasActive){cancelAnimationFrame(raf);raf=0;}}
  function setState(next){const updated={...workState,...next};if(JSON.stringify(updated)===JSON.stringify(workState))return;workState=updated;shop.setState(workState);if(active&&paused)draw(0);}
  function pointerMove(e){if(e.pointerType==='touch'||reduced.matches||paused)return;pointer.set(clamp(e.clientX/innerWidth*2-1,-1,1),clamp(1-e.clientY/innerHeight*2,-1,1));}
@@ -70,7 +71,7 @@ export function createAtelier(host){
  function setTimeOfDay(value,immediate=false){if(!Object.hasOwn(TIME_PRESETS,value))return false;preset=value;targetPhase=TIME_PRESETS[value];if(immediate||paused||reduced.matches)phase=targetPhase;try{localStorage.setItem('zeder.scene.time.v1',value);}catch{}status();if(active)draw(0);return true;}
  function visibility(){last=performance.now();if(document.hidden){cancelAnimationFrame(raf);raf=0;}else if(active&&!paused&&!raf)raf=requestAnimationFrame(tick);}
  function contextLost(e){e.preventDefault();active=false;cancelAnimationFrame(raf);raf=0;document.body.classList.add('world-unavailable');host.dataset.state='lost';document.dispatchEvent(new CustomEvent('world-error',{detail:'3D 연결이 끊겼습니다. 대화는 사용할 수 있습니다.'}));}
- function reducedChanged(){paused=reduced.matches;if(paused){finish();draw(0);}else{last=performance.now();if(active&&!raf)raf=requestAnimationFrame(tick);}}
+ function reducedChanged(){lastReduced=reduced.matches;paused=lastReduced;cancelAnimationFrame(raf);raf=0;last=performance.now();if(paused){pointer.set(0,0);pointerLerp.set(0,0);phase=targetPhase;finish();if(active)draw(0);}else if(active)raf=requestAnimationFrame(tick);document.dispatchEvent(new CustomEvent('world-motion',{detail:{paused}}));}
  const listeners=[[window,'resize',resize],[window,'pointermove',pointerMove],[document,'pointerleave',pointerReset],[window,'blur',pointerReset],[document,'visibilitychange',visibility],[renderer.domElement,'webglcontextlost',contextLost]];listeners.forEach(([el,e,fn])=>el.addEventListener(e,fn));reduced.addEventListener('change',reducedChanged);
  try{if(reduced.matches||sessionStorage.getItem('zeder-atelier-seen'))finish();}catch{}
  resize();draw(0);status();host.dataset.ready='true';document.body.classList.add('world-ready');if(!paused)raf=requestAnimationFrame(tick);

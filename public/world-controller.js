@@ -34,3 +34,5 @@ document.addEventListener('world-error',e=>{const s=document.getElementById('wor
 window.addEventListener('pagehide',()=>world?.setView('off'));window.addEventListener('pageshow',()=>world?.setView(current));
 
 document.addEventListener('click',e=>{const b=e.target.closest('[data-time]');if(!b||!world)return;world.setTimeOfDay(b.dataset.time);controls();});
+
+document.addEventListener('world-motion',()=>controls());
