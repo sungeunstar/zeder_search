@@ -1,0 +1,60 @@
+name: Check deployed workshop
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/production-smoke.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: npm install --no-save --ignore-scripts --no-audit playwright@1.55.1
+      - run: npx playwright install --with-deps chromium
+      - name: Visit actual production URL and exercise the local demo
+        run: |
+          mkdir -p production-check
+          cat > production-check/run.mjs <<'JS'
+          import {chromium} from 'playwright';
+          import assert from 'node:assert/strict';
+          import {writeFile} from 'node:fs/promises';
+          const url='https://zeder-seaside-workshop.vercel.app';
+          const expected='77294b865c2990a18fa0cb387c3c406f31ab91cb';
+          const checks=[],errors=[];let browser;
+          const ok=s=>{checks.push(s);console.log('PASS',s);};
+          try{
+            const info=await fetch(url+'/build-info.json');assert.equal(info.status,200);assert.equal((await info.json()).commit,expected);ok('Public URL serves the expected immutable application commit');
+            const config=await fetch(url+'/api/chat');assert.equal(config.status,200);assert.equal((await config.json()).mode,'demo');ok('Unconfigured API is explicitly demo; no paid model calls');
+            browser=await chromium.launch({headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader','--disable-dev-shm-usage']});
+            const context=await browser.newContext({viewport:{width:1440,height:900},reducedMotion:'reduce'});
+            const page=await context.newPage();page.setDefaultTimeout(60000);
+            page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+            await page.goto(url,{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>!!window.zederWorld);
+            const d=await page.evaluate(()=>zederWorld.debug());assert.equal(d.scene,'seaside-workshop');assert.equal(d.revision,'169');assert.match(d.webgl,/WebGL 2/);assert.equal(d.workshop.stage,'idle');
+            await page.screenshot({path:'production-check/home.png'});ok('Production page renders actual Three.js workshop with its published CSP');
+            await page.evaluate(()=>zederWorld.seek(1.5));await page.screenshot({path:'production-check/approach.png'});await page.locator('[data-world=skip]').click();assert.equal(await page.evaluate(()=>zederWorld.debug().mode),'home');ok('Camera approach and skip work on deployment');
+            await page.locator('#message').fill('쇼핑몰 CS 문의를 정리하는 서비스를 만들었어요. 첫 고객을 찾고 싶어요.');await page.locator('[type=submit]').click();
+            await page.locator('.quick-replies button').filter({hasText:'작은 팀'}).click();await page.locator('.quick-replies button').filter({hasText:'10만원'}).click();await page.locator('.strategy-board').waitFor();
+            assert.equal(await page.locator('.path-card').count(),3);assert.equal(await page.evaluate(()=>zederWorld.debug().workshop.stage),'draft');await page.screenshot({path:'production-check/chat.png'});ok('Published customer conversation creates strategy and updates workshop board');
+            await page.reload({waitUntil:'domcontentloaded'});await page.locator('.strategy-board').waitFor();ok('Native browser data survives reload');
+            await page.goto(url+'/#/studio',{waitUntil:'domcontentloaded'});await page.locator('.studio-sidebar').waitFor();assert.ok(await page.locator('#world-host').isHidden());ok('Marketer studio stays separate and hides 3D');
+            await context.close();
+            const mobile=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true,reducedMotion:'reduce'});mobile.on('pageerror',e=>errors.push(e.message));await mobile.goto(url,{waitUntil:'domcontentloaded'});await mobile.waitForFunction(()=>!!window.zederWorld,null,{timeout:60000});assert.ok(await mobile.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await mobile.screenshot({path:'production-check/mobile.png'});ok('Mobile public page fits viewport');
+            assert.deepEqual(errors,[]);ok('No JavaScript, shader or CSP console errors');
+          }finally{await browser?.close();await writeFile('production-check/results.json',JSON.stringify({url,applicationCommit:expected,checks,errors,method:'Public HTTPS deployment, no authentication bypass, native storage, actual Chromium WebGL2, no mock responses or renderer.'},null,2));}
+          JS
+          node production-check/run.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production-workshop-check
+          path: production-check/
+          retention-days: 7
+          if-no-files-found: error
