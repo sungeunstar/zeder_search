@@ -1,6 +1,6 @@
 {
   "name": "zeder-search",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "engines": { "node": ">=22" },
@@ -9,5 +9,6 @@
     "start": "node --env-file-if-exists=.env server.mjs",
     "build": "node scripts/build.mjs",
     "test": "node --test tests/*.test.mjs"
-  }
+  },
+  "dependencies": { "three": "0.169.0" }
 }
