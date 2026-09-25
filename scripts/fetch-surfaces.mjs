@@ -1,4 +1,4 @@
-import {mkdir,writeFile,readFile} from 'node:fs/promises';
+import {mkdir,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 const root=new URL('../',import.meta.url);
 const selections={aerial_grass_rock:['diff','nor_gl'],rock_face:['diff','nor_gl'],wooden_rough_planks:['diff','nor_gl'],tree_bark_03:['diff','nor_gl']};
@@ -6,7 +6,7 @@ const surfaces={},manifest={license:'CC0-1.0',licenseUrl:'https://polyhaven.com/
 async function get(url){const r=await fetch(url,{headers:{'User-Agent':'ZEDER-material-build/1.0'},signal:AbortSignal.timeout(45000)});if(!r.ok)throw Error(`${r.status} ${url}`);return r;}
 for(const [id,maps]of Object.entries(selections)){
  const metadata=await(await get(`https://api.polyhaven.com/files/${id}`)).json();surfaces[id]={};
- for(const key of maps){const branch=metadata[key]?.['1k'];const item=branch?.jpg||branch?.png;if(!item?.url||new URL(item.url).hostname!=='dl.polyhaven.org')throw Error(`Missing public 1k surface ${id}/${key}`);
+ for(const key of maps){const mapKey=Object.keys(metadata).find(k=>key==='diff'?/^(diff|diffuse|albedo)$/i.test(k):k.toLowerCase()===key);const branch=metadata[mapKey]?.['1k'];const item=branch?.jpg||branch?.png;if(!item?.url||!['dl.polyhaven.org','dl.polyhaven.com'].includes(new URL(item.url).hostname))throw Error(`Missing public 1k surface ${id}/${key}. Keys: ${Object.keys(metadata).join(',')} Item: ${JSON.stringify(item)}`);
  const data=Buffer.from(await(await get(item.url)).arrayBuffer());if(data.length>8000000)throw Error('Unexpected material size');const sha256=createHash('sha256').update(data).digest('hex');
  surfaces[id][key]=`data:image/${branch.jpg?'jpeg':'png'};base64,${data.toString('base64')}`;manifest.assets.push({id,map:key,url:item.url,sha256,bytes:data.length,source:`https://polyhaven.com/a/${id}`});console.log(id,key,data.length,sha256);
  }
