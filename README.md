@@ -1,8 +1,13 @@
 # ZEDER Search
 
+## 3D island homepage
+
+The customer homepage now includes a real Three.js ocean/island scene, cinematic camera, explorer controls and depth-of-field. The marketer studio stays separate. **Run `npm install` before `npm run dev`**; the build vendors the pinned Three.js runtime locally. See [implementation and controls](docs/ISLAND.md).
+
+
 **고객은 이야기하고, 마케터는 전략을 다듬습니다.**
 
-대시보드부터 시작하던 흐름을 대화 우선 UX로 다시 만든 웹 앱입니다. Node.js 22+ 및 브라우저만 있으면 예시 모드를 실행할 수 있으며 npm 외부 패키지 의존성은 없습니다.
+대시보드부터 시작하던 흐름을 대화 우선 UX로 다시 만든 웹 앱입니다. Node.js 22+에서 `npm install` 후 실행합니다. Three.js 0.169.0을 같은 서버에서 제공합니다.
 
 ## 고객 경험
 
@@ -24,13 +29,14 @@
 ## 실행 및 검증
 
 ```bash
+npm install
 npm run dev
 # http://localhost:3000
 npm test
 npm run build
 ```
 
-설치할 외부 패키지는 없습니다. `npm run build`는 문법 검사 후 공개 파일만 `dist/`로 복사합니다. `api/chat.js`는 별도 서버 함수입니다.
+`npm run build`는 문법 검사와 Three.js 로컬 패키징 후 공개 파일을 `dist/`로 복사합니다. `api/chat.js`는 별도 서버 함수입니다.
 
 ```bash
 node scripts/preview.mjs
@@ -71,7 +77,7 @@ GitHub에서 `sungeunstar/zeder_search`를 Import하고 Framework Preset은 `Oth
 
 ## 테스트 결과
 
-Node 로직·스키마·저장소·HTTP 테스트 **47개 통과**. UI 흐름 **16개 통과**. UI 테스트는 환경의 브라우저 네트워크 제한으로 소스를 오프라인 DOM에 로드했으며 storage/fetch/UUID 테스트 어댑터를 사용했습니다. HTTP API는 실제 로컬 루프백 요청으로 별도 검증했습니다. 실제 배포 서버에서의 브라우저 통합 검증은 남아 있습니다.
+Node 로직·스키마·저장소·HTTP·씬 테스트 **61개 통과**. 실제 Three.js/WebGL2 렌더링 및 앱 흐름의 로컬 브라우저 시나리오 **10개 통과**. 로컬 생성 환경은 브라우저 탐색 제한으로 self-contained HTML과 메모리 저장 어댑터를 사용합니다. 렌더러와 셰이더는 실제 Three.js이며 대체 렌더러가 아닙니다. GitHub CI는 별도로 실제 HTTP 접속·브라우저 저장소를 사용하는 `tests/browser.mjs`를 실행합니다. CI 성공 여부는 해당 실행 결과에서 확인하세요. 상세 검증 범위는 `docs/ISLAND.md`를 참고하세요.
 
 ## 주요 파일
 

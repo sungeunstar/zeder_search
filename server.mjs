@@ -1,3 +1,5 @@
+import { vendorThree } from './scripts/vendor.mjs';
+await vendorThree();
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { resolve, extname } from 'node:path';

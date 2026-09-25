@@ -1,3 +1,4 @@
+import { syncWorld } from './world-controller.js';
 import { TOOLS, uid, clean, clone, escapeHTML as esc, makeThread, latestPlan, versionPlan, addReply, demoReply, submitRequest, reviewRequest, approveRequest, requestRevision, artifactFor, validatePlan } from './domain.js';
 import { load, save, savedEvent } from './store.js';
 const $ = selector => document.querySelector(selector);
@@ -32,7 +33,7 @@ function composer(t, home=false) {
   return `<form class="composer ${home?'home-composer':''}" data-form="chat" data-thread="${esc(t?.id??'')}"><label class="sr-only" for="message">비즈니스와 마케팅 고민을 이야기해 주세요</label><textarea id="message" name="message" rows="${home?'3':'2'}" maxlength="4000" placeholder="${home?'제품이나 마케팅 고민을 남겨주세요.':'메시지를 입력하세요.'}" ${waiting?'disabled':''}>${esc(value)}</textarea><div class="composer-bottom"><div class="composer-accessories"><button type="button" class="icon-button" data-action="attach" title="제품 설명 첨부 (.txt, .md)" aria-label="제품 설명 첨부">${icon('plus')}</button></div>${waiting?`<button type="button" class="send-button" data-action="stop" data-id="${id}" aria-label="응답 생성 중지">■</button>`:`<button type="submit" class="${home?'primary start-button':'send-button'}" ${!value.trim()?'disabled':''} aria-label="${home?'전략 대화 시작':'메시지 보내기'}">${home?'시작하기 ':''}${icon(home?'arrow':'up')}</button>`}</div></form>`;
 }
 function home() {
-  return `${header()}<main id="main" class="home-page"><h1>어떤 비즈니스를<br><span>알리고 싶으세요?</span></h1><div class="home-input-wrap">${composer(null,true)}</div><div class="starter-prompts" aria-label="대화 시작 예시"><button data-action="starter" data-value="제품은 만들었는데 첫 고객을 어디서 만나야 할지 모르겠어요.">첫 고객 찾기</button><button data-action="starter" data-value="작은 브랜드를 운영해요. 적은 예산으로 우리 상품을 알리고 싶어요.">브랜드 알리기</button><button data-action="starter" data-value="지금 하는 마케팅을 바꾸고 싶어요. 무엇부터 확인해야 할까요?">마케팅 점검</button></div>${config.mode==='live'?'<p class="composer-note">대화·첨부는 OpenAI API로 전송됩니다.</p>':''}${workspace.threads.length?`<div class="resume-row"><a href="#/chat/${workspace.threads[0].id}">이어서 대화하기 ${icon('arrow')}</a></div>`:''}</main>`;
+  return `${header()}<main id="main" class="home-page"><h1>무엇을 알리고 싶으세요?</h1><div class="home-input-wrap">${composer(null,true)}</div><div class="starter-prompts" aria-label="대화 시작 예시"><button data-action="starter" data-value="제품은 만들었는데 첫 고객을 어디서 만나야 할지 모르겠어요.">첫 고객 찾기</button><button data-action="starter" data-value="작은 브랜드를 운영해요. 적은 예산으로 우리 상품을 알리고 싶어요.">브랜드 알리기</button><button data-action="starter" data-value="지금 하는 마케팅을 바꾸고 싶어요. 무엇부터 확인해야 할까요?">마케팅 점검</button></div>${config.mode==='live'?'<p class="composer-note">대화·첨부는 OpenAI API로 전송됩니다.</p>':''}${workspace.threads.length?`<div class="resume-row"><a href="#/chat/${workspace.threads[0].id}">이어서 대화하기 ${icon('arrow')}</a></div>`:''}<div class="world-controls"><button type="button" class="world-control-explore" data-world="explore">둘러보기 ↗</button><button type="button" data-world="replay" aria-label="카메라 인트로 다시 보기">다시 보기</button><button type="button" data-world="pause" aria-pressed="false">정지</button></div><button type="button" class="world-skip" data-world="skip">건너뛰기 ↵</button><div class="world-exit"><span>방향키 이동 · 드래그 시점 · Space 점프</span><button type="button" data-world="exit">대화로 돌아가기</button></div><div id="world-status" role="status"></div></main>`;
 }
 function toolsView(path) { return path.tools.map(id=>`<button class="tool-chip" data-action="tool" data-tool="${id}" data-path="${esc(path.title)}">${icon(TOOLS[id].icon)}${TOOLS[id].name}</button>`).join(''); }
 function board(t, version, actions=true) {
@@ -76,6 +77,7 @@ function render() {
   if(storageError) {app.innerHTML=`${header()}<main id="main" class="empty-state"><h1>저장된 대화를 확인해 주세요.</h1><p>${esc(storageError)}</p></main>`;return;}
   const r=route(); const t=thread(r.id);
   app.innerHTML=r.view==='studio'?(t?studioDetail(t):studioList()):r.view==='requests'?requestsView():r.view==='chat'&&t?chatView(t):r.view==='request'&&t?progressView(t):home();
+  syncWorld(document.querySelector('.home-page')?'home':r.view);
   if(r.view==='chat')requestAnimationFrame(()=>{const c=$('.conversation');if(c)c.scrollTop=c.scrollHeight;});
   document.title=`${r.view==='studio'?'마케터 스튜디오':r.view==='chat'?'전략 대화':r.view==='request'?'요청 진행 상황':'마케팅 대화'} · ZEDER Search`;
 }
@@ -160,4 +162,4 @@ dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoun
 window.addEventListener('hashchange',()=>{render();window.scrollTo(0,0);});
 window.addEventListener('storage',e=>{if(savedEvent(e)&&!busy.size){try{workspace=load();render();}catch(err){toast(err.message);}}});
 render();
-fetch('/api/chat').then(r=>{if(!r.ok)throw new Error();return r.json();}).then(data=>{if(data.mode==='live'){config=data;render();}}).catch(()=>{/* Static/offline preview remains explicitly in demo mode. */});
+if(location.protocol!=='file:'&&location.protocol!=='about:')fetch('/api/chat').then(r=>{if(!r.ok)throw new Error();return r.json();}).then(data=>{if(data.mode==='live'){config=data;render();}}).catch(()=>{/* Static/offline preview remains explicitly in demo mode. */});
