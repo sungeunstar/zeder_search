@@ -20,12 +20,13 @@ jobs:
       - run: npm run build
       - name: Package source and runtime for reproducible browser verification
         run: |
-          mkdir -p .artifacts
-          git archive --format=zip HEAD -o .artifacts/source.zip
-          cp -R node_modules/three .artifacts/three
-          cp -R dist .artifacts/dist
+          mkdir -p preview-artifacts
+          git archive --format=zip HEAD -o preview-artifacts/source.zip
+          cp -R node_modules/three preview-artifacts/three
+          cp -R dist preview-artifacts/dist
       - uses: actions/upload-artifact@v4
         with:
           name: verified-web-preview
-          path: .artifacts/
+          path: preview-artifacts/
           retention-days: 3
+          if-no-files-found: error
