@@ -7,9 +7,10 @@ const hash=(x,y)=>{const a=Math.sin(x*127.1+y*311.7)*43758.5453;return a-Math.fl
 export function noise(x,y){const a=Math.floor(x),b=Math.floor(y),u=smooth(x-a),v=smooth(y-b);return mix(mix(hash(a,b),hash(a+1,b),u),mix(hash(a,b+1),hash(a+1,b+1),u),v);}
 export function fbm(x,z){return .55*noise(x,z)+.27*noise(x*2.03+9,z*2.03)+.12*noise(x*4.11,z*4.11+13)+.06*noise(x*8.3,z*8.3);}
 export function coast(a){return 1+.055*Math.sin(a*3+.4)+.034*Math.cos(a*7-1)+.019*Math.sin(a*11);}
-export function radius(x,z){return Math.hypot(x/24,z/18)/coast(Math.atan2(z/18,x/24));}
-export function ground(x,z){const r=radius(x,z);const h=9.2+3.1*Math.exp(-((x+3)**2/240+(z+3)**2/210))+.23*(fbm(x*.22,z*.22)-.5)-3.8*smooth((r-.57)/.43);const pad=1-smooth((Math.max(Math.abs(x+3.2)/3.5,Math.abs(z+3.2)/3.8)-.75)/.5);return 8+mix(h,12.28,pad*.94);}
-export const HOUSE={x:-3.2,z:-3.2};
+export const LAND={x:7,z:-6.3,rx:18,rz:10.5};
+export function radius(x,z){return Math.hypot((x-LAND.x)/LAND.rx,(z-LAND.z)/LAND.rz)/coast(Math.atan2((z-LAND.z)/LAND.rz,(x-LAND.x)/LAND.rx));}
+export const HOUSE={x:6.1,z:-3.3};
+export function ground(x,z){const r=radius(x,z);const h=9.2+3.1*Math.exp(-((x-2)**2/280+(z+3)**2/240))+.23*(fbm(x*.22,z*.22)-.5)-.65*smooth((r-.65)/.35);const pad=1-smooth((Math.max(Math.abs(x-HOUSE.x)/5.1,Math.abs(z-HOUSE.z)/4.2)-.88)/.42);return 8+mix(h,12.28,pad*.99);}
 export function walkable(x,z){return radius(x,z)<.88 && !(Math.abs(x-HOUSE.x)<3.5&&z>HOUSE.z-2.7&&z<HOUSE.z+4.2);}
 export const CAMERA_SHOTS=[
  {p:[-48,30,62],t:[-1,20,0],fov:43},
