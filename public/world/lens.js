@@ -10,6 +10,7 @@ export function createLens(renderer,camera){
  float depthAt(vec2 uv){float d=texture2D(tDepth,uv).r;return (uNear*uFar)/(uFar-d*(uFar-uNear));}
  void main(){
  float depth=depthAt(vUv);float coc=clamp((depth-uFocus)/max(depth,.1)*uAperture,-1.,1.);
+ if(depth>1200.)coc=0.;
  float radius=abs(coc)*10.5;vec3 color=texture2D(tColor,vUv).rgb;float weight=1.;
  // Golden-angle bokeh disk. Don't blur sharp foreground with objects behind it.
  for(int i=0;i<24;i++){float fi=float(i)+.5;float a=fi*2.399963;vec2 off=vec2(cos(a),sin(a))*sqrt(fi/24.)*radius/uResolution;vec2 uv=clamp(vUv+off,vec2(.001),vec2(.999));float dd=depthAt(uv);float w=dd<depth*.8?.2:1.;vec3 s=texture2D(tColor,uv).rgb;color+=s*w;weight+=w;}

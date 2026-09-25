@@ -1,0 +1,9 @@
+/* Three quiet time controls. The workshop, ocean and sky share one time state. */
+.time-controls{position:fixed;right:31px;bottom:23px;display:flex;align-items:center;gap:5px;padding:5px;border:1px solid #fff6de45;border-radius:24px;background:#172d3938;backdrop-filter:blur(10px);z-index:5;pointer-events:auto}
+.time-controls button{display:grid;place-items:center;width:33px;height:31px;border:0;border-radius:50%;color:#fff7e5a3;background:transparent;cursor:pointer;transition:background .2s,color .2s}
+.time-controls button[aria-pressed=true]{background:#fff3d725;color:#fff8e9}
+.time-controls button:hover{color:white;background:#fff3d720}.time-controls button:focus-visible{outline:2px solid #ffe6a5;outline-offset:2px}
+.world-skip{bottom:29px;right:165px}
+body[data-time-of-day=night] #world-host:after{background:linear-gradient(180deg,transparent 55%,#04122540)}
+body[data-time-of-day=night] .world-home .home-composer{background:#0f1e346a}
+@media(max-width:700px){.time-controls{right:17px;bottom:20px;gap:2px;padding:4px}.time-controls button{width:30px;height:30px}.world-skip{right:131px;bottom:29px}.world-controls{max-width:calc(100vw - 150px)}.world-chat .time-controls{display:none}}
