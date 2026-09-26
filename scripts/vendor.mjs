@@ -10,5 +10,10 @@ export async function vendorThree(){
   await mkdir(resolve(root,'public/world'),{recursive:true});
   const rounded=await readFile(resolve(root,'node_modules/three/examples/jsm/geometries/RoundedBoxGeometry.js'),'utf8');
   await writeFile(resolve(root,'public/world/rounded-box.js'),'// Three.js MIT; license in ../vendor/THREE-LICENSE.txt\n'+rounded.replace("from 'three'","from '../vendor/three.module.js'"));
+  for(const [source,name] of [['loaders/GLTFLoader.js','GLTFLoader.js'],['utils/BufferGeometryUtils.js','BufferGeometryUtils.js'],['utils/SkeletonUtils.js','SkeletonUtils.js']]){
+   let code=await readFile(resolve(root,'node_modules/three/examples/jsm',source),'utf8');
+   code=code.replace(/from 'three'/g,"from './three.module.js'").replace("from '../utils/BufferGeometryUtils.js'","from './BufferGeometryUtils.js'");
+   await writeFile(resolve(root,'public/vendor',name),code);
+  }
  }catch{throw new Error('Three.js is missing. Run npm install before npm run dev or npm run build.');}
 }

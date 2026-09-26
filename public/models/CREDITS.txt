@@ -1,0 +1,14 @@
+ZEDER workshop character
+
+Source model and original Idle_Neutral / Walk animations:
+Quaternius — Ultimate Modular Men Pack (2022), Farmer.
+License: CC0 1.0 Universal / public domain dedication.
+Original artist: https://quaternius.com/packs/ultimatemodularcharacters.html
+Source distribution: https://drive.google.com/drive/folders/1USAAquX2JJWuA2m6zol0KUkFe3UkZ8zX
+Original Farmer.gltf SHA256: 46d3e85fa8d848ee479ab8e4672c16724ee4ea51f3af5733705a153937f93555
+Prepared maker.glb SHA256: 6fde0b72da1bc236aff038f41faa543422f4e3ba50dbd32becc424a5fc718659
+
+Changes for ZEDER: prune unrelated animations, compact as self-contained GLB,
+workshop palette, softened normals, authored desk/read/carry/board key poses.
+The character is a licensed low-poly asset, not an original photoreal model
+or an exact reproduction of the generated concept image.

@@ -1,0 +1,8 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {createHash} from 'node:crypto';
+test('Worker is a self-contained hash-pinned skinned GLB, not primitive body parts',async()=>{
+ const b=await readFile(new URL('../public/models/maker.glb',import.meta.url));assert.equal(createHash('sha256').update(b).digest('hex'),'6fde0b72da1bc236aff038f41faa543422f4e3ba50dbd32becc424a5fc718659');assert.equal(b.readUInt32LE(0),0x46546c67);assert.equal(b.readUInt32LE(8),b.length);assert.ok(b.length<1024*1024);
+ const g=JSON.parse(b.subarray(20,20+b.readUInt32LE(12)).toString());assert.ok(g.skins.length>=1);assert.ok(g.skins.every(s=>s.joints.length>=50));assert.deepEqual(g.animations.map(a=>a.name).sort(),['Idle_Neutral','Interact','Walk'].sort());for(const m of g.meshes)for(const p of m.primitives){assert.ok(p.attributes.JOINTS_0!==undefined);assert.ok(p.attributes.WEIGHTS_0!==undefined);}assert.ok(g.buffers.every(b=>b.uri===undefined));assert.equal((g.images||[]).length,0);
+});
+test('Active worker uses the skeleton, original gait, normalized blends and hand-attached props',async()=>{
+ const s=await readFile(new URL('../public/world/rigged-maker.js',import.meta.url),'utf8'),w=await readFile(new URL('../public/world/workshop.js',import.meta.url),'utf8');assert.match(w,/from '\.\/rigged-maker\.js'/);assert.match(s,/await loadMakerAsset\(\)/);assert.match(s,/new T.AnimationMixer/);assert.match(s,/cloneSkeleton/);assert.match(s,/Idle_Neutral/);assert.match(s,/Walk_Carry/);assert.doesNotMatch(s,/scale\.y\s*=|solveArm\(contacts|new T\.SphereGeometry/);assert.match(s,/getEffectiveWeight\(\)\/sum/);assert.match(s,/Prop anchors are read from the animated skeleton/);
+});

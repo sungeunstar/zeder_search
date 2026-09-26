@@ -20,6 +20,7 @@ jobs:
       - run: npm run build
       - run: npm install --no-save --ignore-scripts --no-audit playwright@1.55.1
       - run: npx playwright install --with-deps chromium
+      - run: node tests/rigged-character-browser.mjs
       - run: node tests/browser.mjs
       - name: Package source and runtime for reproducible browser verification
         run: |
@@ -28,6 +29,7 @@ jobs:
           cp -R node_modules/three preview-artifacts/three
           cp -R dist preview-artifacts/dist
           cp -R browser-artifacts preview-artifacts/browser
+          cp -R character-qa preview-artifacts/character
       - uses: actions/upload-artifact@v4
         with:
           name: verified-web-preview
