@@ -1,3 +1,4 @@
+import {workFraming} from './work-framing.js';
 import * as T from '../vendor/three.module.js';
 import {ground,clamp,smooth} from './math.js';
 import {makeMaterials,V} from './craft.js';
@@ -11,7 +12,9 @@ import {createWorkshop} from './workshop.js';
 import {TIME_PRESETS,DEFAULT_TIME,approachPhase,cameraOrbit} from './environment-state.js';
 
 export const ATELIER_CAMERA={position:[-7.2,26.9,27.0],target:[1.6,24.0,-3.2],fov:37};
-export function createAtelier(host){
+export async function createAtelier(host){
+ const checkpoint=async(value,label)=>{window.dispatchEvent(new CustomEvent('zeder-scene-progress',{detail:{value,label}}));await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));};
+ await checkpoint(38,'목재와 도면을 꺼내고 있어요');
  const mobile=matchMedia('(max-width:700px)').matches,reduced=matchMedia('(prefers-reduced-motion: reduce)');
  const renderer=new T.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
  const gl=renderer.getContext(),gpu=gl.getExtension('WEBGL_debug_renderer_info');const software=/swiftshader|llvmpipe|softpipe/i.test(gpu?gl.getParameter(gpu.UNMASKED_RENDERER_WEBGL):'');const lightGeometry=mobile;
@@ -25,14 +28,17 @@ export function createAtelier(host){
  const bounce=new T.DirectionalLight('#bcd6e4',1.02);bounce.position.set(-2,29,38);scene.add(bounce);
  const moon=new T.DirectionalLight('#9bbdff',0);moon.position.set(-26,40,-50);scene.add(moon);
  const materials=makeMaterials();materials.grass.color.set('#c1cba9');materials.leaves.color.set('#d2d5aa');materials.bark.color.set('#ece7d7');materials.stone.color.set('#ffffff');
+ await checkpoint(48,'바닷가 작업대를 조립하고 있어요');
  makeIsland(scene,materials);const grass=makeMeadow(scene,materials,lightGeometry);
+ await checkpoint(61,'창가와 선반을 정리하고 있어요');
  const forest=trees(scene,materials,lightGeometry,[[-3.8,-4.5,1.00],[16.2,-9.8,1.14],[21.4,-.8,.99],[8.3,-14.5,.85],[21.5,5.3,1.1],[-11,2,.74],[22,3,.92]]);
  const shrubs=coastalPlants(scene,materials);
+ await checkpoint(75,'작업자의 노트를 펼치고 있어요');
  const shop=createWorkshop(scene,materials),air=atmosphere(scene,mobile),gulls=birds(scene),lens=createLens(renderer,camera);
  const finalPos=V(...ATELIER_CAMERA.position),finalAim=V(...ATELIER_CAMERA.target);
  if(mobile){finalPos.set(-8.9,27.3,33.5);finalAim.set(3.0,23.6,-3);camera.fov=49;camera.updateProjectionMatrix();}
  const path=new T.CatmullRomCurve3([V(-29,29.6,39),V(-19,28.5,32),V(-11,26.9,26.4),finalPos],false,'centripetal');
- const pointer=new T.Vector2(),pointerLerp=new T.Vector2();
+ const pointer=new T.Vector2(),pointerLerp=new T.Vector2(),workOffset=V(),lookTarget=finalAim.clone();let workYaw=0;
  let preset=DEFAULT_TIME;try{const saved=localStorage.getItem('zeder.scene.time.v1');if(Object.hasOwn(TIME_PRESETS,saved))preset=saved;}catch{}
  let phase=TIME_PRESETS[preset],targetPhase=phase,lastLighting=-1,light=null;
  let lastReduced=reduced.matches;
@@ -42,12 +48,13 @@ export function createAtelier(host){
  function resize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();const s=renderer.getDrawingBufferSize(new T.Vector2());lens.setSize(s.x,s.y);if(frames&&active&&paused)draw(0);}
  function draw(dt){
   if(mode==='intro'){elapsed+=dt;const t=smooth(elapsed/5);camera.position.copy(path.getPoint(t));camera.lookAt(finalAim.clone().lerp(V(2,20,0),.25*(1-t)));if(elapsed>=5)finish();}
-  else{
+  else if(!document.querySelector('dialog[open]')&&!document.activeElement?.matches('textarea,input,select,[contenteditable=true]')){
+   const cue=workFraming(shop.debug().activity,{reduced:reduced.matches,mobile});const alpha=1-Math.exp(-Math.max(dt,.016)*1.65);workOffset.lerp(V(...cue.offset),alpha);workYaw+=(cue.yaw-workYaw)*alpha;lookTarget.copy(finalAim).add(workOffset);
    const desired=reduced.matches?new T.Vector2():pointer;
    pointerLerp.lerp(desired,1-Math.exp(-Math.max(dt,.016)*3.0));
    const shifted=finalPos.clone();if(['chat','request'].includes(view))shifted.z-=1.15;
-   const orbit=cameraOrbit(shifted.toArray(),finalAim.toArray(),pointerLerp.toArray(),camera.aspect);
-   camera.position.lerp(V(...orbit),1-Math.exp(-Math.max(dt,.016)*4.1));camera.lookAt(finalAim);
+   const combined=pointerLerp.clone();combined.x+=workYaw/.24;const orbit=cameraOrbit(shifted.toArray(),finalAim.toArray(),combined.toArray(),camera.aspect);
+   camera.position.lerp(V(...orbit),1-Math.exp(-Math.max(dt,.016)*4.1));camera.lookAt(lookTarget);
   }
   if(!paused&&!reduced.matches)phase=approachPhase(phase,targetPhase,dt);
   light=air.apply(phase,time);
@@ -80,7 +87,7 @@ export function createAtelier(host){
  function tick(now){raf=0;if(disposed||!active||document.hidden)return;if(reduced.matches!==lastReduced){reducedChanged();return;}const raw=(now-last)/1000,dt=Math.min(.08,Math.max(.001,raw));last=now;if(!paused){time+=dt;draw(dt);}else if(!frames)draw(0);if(frames>15&&raw>.095)slow++;else slow=Math.max(0,slow-1);if(slow>25&&renderer.getPixelRatio()>1){renderer.setPixelRatio(1);slow=0;resize();}if(!paused)raf=requestAnimationFrame(tick);}
  function setView(v){const wasActive=active;view=v;active=['home','chat','request'].includes(v);host.hidden=!active;document.body.classList.toggle('world-home',v==='home');document.body.classList.toggle('world-chat',['chat','request'].includes(v));if(['chat','request'].includes(v)&&mode==='intro')finish();last=performance.now();if(active&&!raf&&!paused)raf=requestAnimationFrame(tick);if(!active&&wasActive){cancelAnimationFrame(raf);raf=0;}}
  function setState(next){const updated={...workState,...next};if(JSON.stringify(updated)===JSON.stringify(workState))return;workState=updated;shop.setState(workState);if(active&&paused)draw(0);}
- function pointerMove(e){if(e.pointerType==='touch'||reduced.matches||paused||document.querySelector('dialog[open]')||e.target.closest?.('.chat-page,.site-header,.time-controls,#workbench-result'))return;pointer.set(clamp(e.clientX/innerWidth*2-1,-1,1),clamp(1-e.clientY/innerHeight*2,-1,1));}
+ function pointerMove(e){if(e.pointerType==='touch'||reduced.matches||paused||document.querySelector('dialog[open]')||e.target.closest?.('.chat-page,.site-header,.time-controls,.brief-rail,#workbench-result,#workshop-loader'))return;pointer.set(clamp(e.clientX/innerWidth*2-1,-1,1),clamp(1-e.clientY/innerHeight*2,-1,1));}
  function pointerReset(){pointer.set(0,0);}
  function setTimeOfDay(value,immediate=false){if(!Object.hasOwn(TIME_PRESETS,value))return false;preset=value;targetPhase=TIME_PRESETS[value];if(immediate||paused||reduced.matches)phase=targetPhase;try{localStorage.setItem('zeder.scene.time.v1',value);}catch{}status();if(active)draw(0);return true;}
  function visibility(){last=performance.now();if(document.hidden){cancelAnimationFrame(raf);raf=0;}else if(active&&!paused&&!raf)raf=requestAnimationFrame(tick);}
@@ -90,9 +97,10 @@ export function createAtelier(host){
  // Keep accessibility preferences in sync while the animation loop is asleep.
  const motionWatch=setInterval(()=>{if(!disposed&&active&&!document.hidden&&reduced.matches!==lastReduced)reducedChanged();},750);
  try{if(reduced.matches||sessionStorage.getItem('zeder-atelier-seen'))finish();}catch{}
+ await checkpoint(90,'공방에 불을 켜고 있어요');
  resize();draw(0);status();host.dataset.ready='true';document.body.classList.add('world-ready');if(!paused)raf=requestAnimationFrame(tick);
  return {setView,setState,setTimeOfDay,skip(){finish();draw(0);},replay(){mode='intro';elapsed=0;paused=false;status();last=performance.now();if(!raf)raf=requestAnimationFrame(tick);},togglePause(){paused=!paused;if(paused&&mode==='intro')finish();last=performance.now();if(!paused&&!raf&&active)raf=requestAnimationFrame(tick);draw(0);return paused;},
-  debug(){return {engine:'Three.js',revision:T.REVISION,mode,paused,active,frames,scene:'seaside-workshop',quality:lightGeometry?'light':'full',grassBlades:grass.mesh.count,leaves:forest.count,shoreShrubs:shrubs.count,terrain:"continuous-heightfield",camera:camera.position.toArray(),pointer:pointerLerp.toArray(),pointerTarget:pointer.toArray(),reducedMotion:reduced.matches,timeOfDay:preset,phase,night:light?.night??0,water:air.debug(),workshop:shop.debug(),drawCalls:lens.stats.calls,triangles:lens.stats.triangles,webgl:renderer.getContext().getParameter(renderer.getContext().VERSION)};},
+  debug(){return {engine:'Three.js',revision:T.REVISION,mode,paused,active,frames,scene:'seaside-workshop',quality:lightGeometry?'light':'full',workCameraOffset:workOffset.toArray(),workCameraYaw:workYaw,grassBlades:grass.mesh.count,leaves:forest.count,shoreShrubs:shrubs.count,terrain:"continuous-heightfield",camera:camera.position.toArray(),pointer:pointerLerp.toArray(),pointerTarget:pointer.toArray(),reducedMotion:reduced.matches,timeOfDay:preset,phase,night:light?.night??0,water:air.debug(),workshop:shop.debug(),drawCalls:lens.stats.calls,triangles:lens.stats.triangles,webgl:renderer.getContext().getParameter(renderer.getContext().VERSION)};},
   seek(s){paused=true;mode='intro';elapsed=clamp(s,0,5);time=s;if(s>=5)finish();status();draw(0);},advance(s){if(!Number.isFinite(s)||s<0||s>60)throw new TypeError('Advance expects 0..60 seconds');paused=true;for(let left=s;left>0;left-=.05){const dt=Math.min(.05,left);time+=dt;shop.update(dt,time,{reduce:reduced.matches});}renderer.shadowMap.needsUpdate=true;draw(0);},testPointer(x,y){pointer.set(clamp(x,-1,1),clamp(y,-1,1));pointerLerp.copy(pointer);const p=cameraOrbit(finalPos.toArray(),finalAim.toArray(),pointer.toArray(),camera.aspect);camera.position.set(...p);camera.lookAt(finalAim);lens.render(scene);},
   dispose(){disposed=true;clearInterval(motionWatch);cancelAnimationFrame(raf);listeners.forEach(([el,e,fn])=>el.removeEventListener(e,fn));reduced.removeEventListener('change',reducedChanged);const gs=new Set(),ms=new Set(),ts=new Set();scene.traverse(o=>{if(o.geometry)gs.add(o.geometry);for(const m of(Array.isArray(o.material)?o.material:o.material?[o.material]:[])){ms.add(m);for(const v of Object.values(m))if(v?.isTexture)ts.add(v);}});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());ts.forEach(t=>t.dispose());lens.dispose();renderer.dispose();host.replaceChildren();}
  };

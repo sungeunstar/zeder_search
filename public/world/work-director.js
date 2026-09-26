@@ -41,6 +41,7 @@ export function routeBetween(from,to){
  points.push(end);return points.filter((p,i)=>distance(i?points[i-1]:start,p)>.02);
 }
 export function createWorkDirector(){
+ let ambientRound=0;
  let info={},state='idle',action='idle',task='brief',generation=null,station='desk',elapsed=0;
  let position=[...STATIONS.desk.position],yaw=STATIONS.desk.yaw,queue=[],current=null,speed=0,phaseTime=0,carrying=false,revision=0;
  const history=[];
@@ -79,8 +80,8 @@ export function createWorkDirector(){
  }
  function ambientSteps(){
   const side=[STATIONS.desk.position[0]+1.12,.405,3.55];
-  const steps=[...stepsTo('desk'),{action:'tidy',duration:3.6,station:'desk'},
-   {action:'stretch',duration:2.2,station:'desk'},{action:'look-sea',duration:3.0,station:'desk'},
+  const steps=[...stepsTo('desk'),{action:'tidy',duration:3.6+(ambientRound++%3)*.35,station:'desk'},
+   {action:ambientRound%2?'read':'stretch',duration:2.2,station:'desk'},{action:'look-sea',duration:3.0,station:'desk'},
    {action:'walk',to:side,station:'desk'},{action:'look-sea',duration:2.0,station:'desk'},
    ...stepsTo('desk',false,side),{action:'tidy',duration:2.4,station:'desk'}];
   return steps.map(s=>({...s,ambient:true}));
@@ -93,8 +94,11 @@ export function createWorkDirector(){
   // Housekeeping is ambience, NOT request processing; it never changes semantic state.
   if(['idle','awaiting_input','result_ready','review_wait','review_ready','approved'].includes(state)&&['idle','wait'].includes(action)&&current.duration===Infinity&&elapsed>3.2){queue=ambientSteps();next();}
   if(current.action==='walk'){
-   const d=distance(position,current.to),move=Math.min(d,delta*2.65);
-   if(d>.005){const desired=Math.atan2(current.to[0]-position[0],current.to[2]-position[2]);yaw+=angle(yaw,desired)*(1-Math.exp(-delta*9));position[0]+=(current.to[0]-position[0])*move/d;position[2]+=(current.to[2]-position[2])*move/d;speed=move/Math.max(delta,.001);}
+   const d=distance(position,current.to),desired=Math.atan2(current.to[0]-position[0],current.to[2]-position[2]);
+   const error=angle(yaw,desired);yaw+=error*(1-Math.exp(-delta*8));
+   const wanted=Math.abs(error)>.72?0:Math.min(1.85,Math.sqrt(d*5.2));
+   speed+=(wanted-speed)*(1-Math.exp(-delta*6));const move=Math.min(d,delta*speed);
+   if(d>.005){position[0]+=(current.to[0]-position[0])*move/d;position[2]+=(current.to[2]-position[2])*move/d;}
    if(d<.025){position=[...current.to];speed=0;next();}
   }else{
    speed*=Math.exp(-delta*12);const target=action==='look-sea'?-1.08:action==='ready'?.15:STATIONS[station].yaw;yaw+=angle(yaw,target)*(1-Math.exp(-delta*5));
@@ -104,7 +108,7 @@ export function createWorkDirector(){
  }
  function view(){
   const status=state==='processing'?TASK_LABELS[task]||TASK_LABELS.brief:({idle:'',awaiting_input:'답변을 기다리고 있어요',result_ready:'전략 초안 준비됨',review_wait:'검토 대기 · 로컬 체험',review_ready:'검토본 준비됨 · 로컬 체험',approved:'준비 승인됨 · 외부 실행 전',cancelled:'응답 생성 중지',error:'응답을 만들지 못했어요'}[state]||'');
-  return {state,action,ambient:!!current?.ambient,task,station,position:[...position],yaw,speed,phaseTime,carrying,status,processing:state==='processing',resultAvailable:!!info.outputId&&state!=='processing',generation,threadId:info.threadId||null,outputId:info.outputId||null,revision,history:history.map(e=>({...e}))};
+  return {state,action,elapsed,duration:Number.isFinite(current?.duration)?current.duration:null,ambient:!!current?.ambient,task,station,position:[...position],yaw,speed,phaseTime,carrying,status,processing:state==='processing',resultAvailable:!!info.outputId&&state!=='processing',generation,threadId:info.threadId||null,outputId:info.outputId||null,revision,history:history.map(e=>({...e}))};
  }
  return {observe,update,view};
 }

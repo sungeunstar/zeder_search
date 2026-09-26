@@ -8,6 +8,7 @@
   <meta name="description" content="어떤 비즈니스를 알리고 싶으세요? 대화로 전략을 정리하고, 마케터의 검토를 거쳐 실행을 준비하세요.">
   <title>ZEDER Search</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/workshop-loader.css">
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/quiet.css">
   <link rel="stylesheet" href="/world.css">
@@ -15,12 +16,23 @@
   <link rel="stylesheet" href="/work-dock.css">
   <link rel="stylesheet" href="/experience.css">
   <link rel="stylesheet" href="/single-gate.css">
+  <script defer src="/workshop-loader.js"></script>
   <script type="module" src="/app.js"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">본문으로 이동</a>
   <div id="world-host" aria-hidden="true" hidden></div>
   <div id="app"></div>
+  <div id="workshop-loader" role="status" aria-live="polite">
+    <div class="loader-room">
+      <svg viewBox="0 0 96 86" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M10 35 48 13 86 35M18 31v40h60V31M26 70V46h44v24M31 46v-8h34v8M34 13V7h6v9M10 78c12-5 15 5 27 0s15 5 27 0 15 5 27 0"/><path class="lamp" d="M48 26v7m-5 6 5-6 5 6Zm-2 3h14M48 47v4"/></svg>
+      <h2>공방에 불을 켜고 있어요</h2>
+      <p>문을 열 준비를 하고 있어요</p>
+      <progress max="100" value="0" aria-label="공방 준비 단계"></progress>
+      <button type="button" hidden>공방 없이 대화하기</button>
+      <noscript>JavaScript를 켜면 공방에 들어갈 수 있어요.</noscript>
+    </div>
+  </div>
   <dialog id="dialog" aria-labelledby="dialog-title"></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
   <noscript>대화를 시작하려면 브라우저의 JavaScript를 켜 주세요.</noscript>

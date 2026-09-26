@@ -82,11 +82,8 @@ export function createWorkshop(scene,m){
  obj(new T.CircleGeometry(.31,20),glow,[-.35,4.06,.45],[1,1,1],[Math.PI/2,0,0]);const warm=new T.PointLight('#ffcc86',15,10,2);warm.position.set(-.35,3.78,.65);root.add(warm);
  function lantern(x,y,z){metal.box([x,y,z],[.33,.55,.31]);obj(new T.BoxGeometry(.27,.39,.32),glow,[x,y,z+.015]);for(const dx of [-.16,.16])metal.box([x+dx,y,z+.18],[.035,.50,.035]);metal.box([x,y-.25,z],[.40,.055,.36]);obj(new T.ConeGeometry(.29,.18,4),m.iron,[x,y+.33,z],[1,1,1],[0,Math.PI/4,0]);metal.add(new T.TorusGeometry(.09,.015,5,12),transform([x,y+.49,z]));const l=new T.PointLight('#ffd297',4.3,5,2);l.position.set(x,y,z+.25);root.add(l);}
  lantern(-4.34,2.9,3.73);lantern(4.35,3.0,3.73);lantern(3.63,4.66,-2.6);
- // Small creative furnace / ceramic kiln tucked left. Only ambient fire, not a fake execution indicator.
- stone.box([-3.39,.83,-1.15],[1.36,1.08,1.33],[0,0,0],'#777969');stone.box([-3.39,1.48,-1.15],[1.62,.20,1.55],[0,0,0],'#a49d8c');
- metal.box([-3.39,.94,-.46],[.93,.70,.02]);obj(new T.PlaneGeometry(.73,.49),new T.MeshBasicMaterial({color:'#db772a'}),[-3.39,.94,-.438]);
- for(let i=0;i<5;i++)metal.box([-3.71+i*.16,.93,-.42],[.038,.56,.035]);
- const ember=new T.PointLight('#ff8a39',2.4,3.1,2);ember.position.set(-3.39,1.15,-.2);root.add(ember);
+ // The aisle stays open. No kiln, anvil or simulated production flame.
+ const ember=new T.PointLight('#ffdfae',0,1,2);
  // Crates, rolls, books, stool, bucket and plants outside the open facade.
  function crate(x,y,z,w=.9){planks.box([x,y+w*.5,z],[w,w,w*.84]);for(const xx of [-1,1])wood.box([x+xx*w*.45,y+w*.5,z+w*.46],[w*.07,w,.055]);for(const yy of [.08,.91])wood.box([x,y+w*yy,z+w*.46],[w,.07,.056]);wood.beam([x-w*.38,y+.13,z+w*.49],[x+w*.38,y+w*.86,z+w*.49],.04);}
  crate(5.1,.32,2.1,1.05);crate(5.9,.33,1.26,.76);crate(-4.95,.10,1.94,.97);lantern(5.1,1.75,2.13);
@@ -124,9 +121,9 @@ export function createWorkshop(scene,m){
  let info={stage:'idle',audience:'',channel:'',offer:'',count:0},intensity=0,lastBoard='';
  function drawBoard(){const sig=JSON.stringify(info);if(sig===lastBoard)return;lastBoard=sig;bc.fillStyle='#dbc79d';bc.fillRect(0,0,1024,640);
   bc.fillStyle='#d0ba90';for(let i=0;i<650;i++)bc.fillRect(rnd()*1024,rnd()*640,1,1);
-  bc.fillStyle='#6c543c';bc.font='28px serif';bc.fillText('Z /  STRATEGY ATELIER',66,70);bc.strokeStyle='#a18e6e';bc.lineWidth=1;bc.beginPath();bc.moveTo(62,98);bc.lineTo(960,98);bc.stroke();
-  const fields=[['타깃',info.audience],['채널',info.channel],['제안',info.offer]];
-  fields.forEach(([k,v],i)=>{const yy=180+i*155;bc.font='48px sans-serif';bc.fillStyle='#574b37';bc.fillText(k,72,yy);bc.font='31px sans-serif';bc.fillStyle='#71654e';const text=String(v||'').slice(0,27);bc.fillText(text,72,yy+53);bc.strokeStyle='#b4a17e';bc.beginPath();bc.moveTo(70,yy+73);bc.lineTo(950,yy+73);bc.stroke();});
+  bc.fillStyle='#6c543c';bc.font='600 28px Montserrat, Pretendard, sans-serif';bc.fillText('Z /  STRATEGY ATELIER',66,70);bc.strokeStyle='#a18e6e';bc.lineWidth=1;bc.beginPath();bc.moveTo(62,98);bc.lineTo(960,98);bc.stroke();
+  const fields=[['누구에게',info.audience],['어떤 제안',info.offer],['첫 실행',info.firstAction]];
+  fields.forEach(([k,v],i)=>{const yy=180+i*155;bc.font='600 42px Pretendard, sans-serif';bc.fillStyle='#574b37';bc.fillText(k,72,yy);bc.font='30px Pretendard, sans-serif';bc.fillStyle='#71654e';const text=String(v||'').slice(0,27);bc.fillText(text,72,yy+53);bc.strokeStyle='#b4a17e';bc.beginPath();bc.moveTo(70,yy+73);bc.lineTo(950,yy+73);bc.stroke();});
   boardTexture.needsUpdate=true;
  }
  drawBoard();

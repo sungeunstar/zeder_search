@@ -27,8 +27,9 @@ export function syncWorld(view,t=null,busy=false){
  host.hidden=!active;document.body.classList.toggle('world-home',view==='home');document.body.classList.toggle('world-chat',['chat','request'].includes(view));
  if(world){world.setView(view);world.setState(workState);controls();return;}
  if(!active||loading)return;
- loading=import('./world/atelier.js').then(({createAtelier})=>{world=createAtelier(host);world.setView(current);world.setState(workState);window.zederWorld=world;controls();}).catch(error=>{
-  console.error('Workshop renderer failed:',error);document.body.classList.add('world-unavailable');host.textContent='';host.dataset.state='unavailable';const msg=document.getElementById('world-status');if(msg)msg.textContent='3D 화면을 불러오지 못했습니다. 대화는 사용할 수 있습니다.';
+ window.dispatchEvent(new CustomEvent('zeder-scene-progress',{detail:{value:20,label:'공방 재료를 가져오고 있어요'}}));
+ loading=import('./world/atelier.js').then(async({createAtelier})=>{world=await createAtelier(host);world.setView(current);world.setState(workState);window.zederWorld=world;controls();window.dispatchEvent(new CustomEvent('zeder-scene-ready'));}).catch(error=>{
+  window.dispatchEvent(new CustomEvent('zeder-scene-failed'));console.error('Workshop renderer failed:',error);document.body.classList.add('world-unavailable');host.textContent='';host.dataset.state='unavailable';const msg=document.getElementById('world-status');if(msg)msg.textContent='3D 화면을 불러오지 못했습니다. 대화는 사용할 수 있습니다.';
  });
 }
 document.addEventListener('click',e=>{const b=e.target.closest('[data-world]');if(!b||!world)return;const a=b.dataset.world;if(a==='skip')world.skip();if(a==='replay')world.replay();if(a==='pause')world.togglePause();controls();});

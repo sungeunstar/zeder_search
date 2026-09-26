@@ -17,4 +17,6 @@ const entry=await add(resolve(root,'app.js'));let html=await readFile(resolve(ro
 for(const match of [...html.matchAll(/<link rel="stylesheet" href="\/([^\"]+)">/g)]){html=html.replace(match[0],'<style>'+await readFile(resolve(root,match[1]),'utf8')+'</style>');}
 html=html.replace(/<link rel="icon"[^>]+>/,'<link rel="icon" href="data:,">');
 html=html.replace('<script type="module" src="/app.js"></script>','<script type="importmap">'+JSON.stringify({imports:Object.fromEntries(modules)})+'</script><script type="module">import '+JSON.stringify(entry)+'</script>');
+html=html.replace('<script defer src="/workshop-loader.js"></script>','');
+html=html.replace('</body>','<script>'+await readFile(resolve(root,'workshop-loader.js'),'utf8')+'</script></body>');
 const out=resolve(process.argv[2]||'standalone-island.html');await writeFile(out,html);console.log(out);

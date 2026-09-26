@@ -1,0 +1,16 @@
+/* A lightweight HTML entrance; no 3D asset is needed to paint this screen. */
+#workshop-loader{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:#1b3036;color:#f3eddf;font-family:Montserrat,Pretendard,system-ui,sans-serif;transition:opacity .45s ease;isolation:isolate}
+#workshop-loader[hidden]{display:none}#workshop-loader.is-leaving{opacity:0;pointer-events:none}
+.loader-room{width:min(350px,calc(100vw - 56px));text-align:center}
+.loader-room svg{width:90px;height:86px;overflow:visible;color:#d9bb81;margin-bottom:22px}
+.loader-room .lamp{animation:atelier-light 2.4s ease-in-out infinite;transform-origin:48px 35px}
+.loader-room h2{font-size:23px;font-weight:600;letter-spacing:-.035em;line-height:1.55;margin:0 0 14px}
+.loader-room p{font-size:12px;color:#c6cbbf;line-height:1.65;min-height:20px;margin:0 0 27px}
+.loader-room progress{appearance:none;-webkit-appearance:none;display:block;width:100%;height:5px;overflow:hidden;border:0;border-radius:10px;background:#ffffff1c;color:#dcc395}
+.loader-room progress::-webkit-progress-bar{background:#ffffff1c;border-radius:10px}
+.loader-room progress::-webkit-progress-value{background:linear-gradient(90deg,#a58751,#ebd5a7);border-radius:10px;transition:width .4s ease}
+.loader-room progress::-moz-progress-bar{background:#dcc395;border-radius:10px}
+.loader-room button{display:block;margin:26px auto 0;min-height:38px;padding:7px 12px;background:transparent;border:1px solid #d6c9a946;border-radius:20px;color:#e9dfcb;font:500 11px/1.5 Montserrat,Pretendard,system-ui,sans-serif;cursor:pointer}
+.loader-room button[hidden]{display:none}.loader-room button:focus-visible{outline:2px solid #ead4a8;outline-offset:5px}
+@keyframes atelier-light{0%,100%{opacity:.55}50%{opacity:1}}
+@media(prefers-reduced-motion:reduce){#workshop-loader,.loader-room progress::-webkit-progress-value{transition:none}.loader-room .lamp{animation:none}}

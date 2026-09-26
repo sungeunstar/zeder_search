@@ -12,5 +12,5 @@ export function workSnapshot(thread,busy=false){
  return {threadId:t.id,generationId:busy?t.pendingGeneration?.generationId||'':'',responseId:response?.id||'',outputId:p?`${t.id}:v${version}`:'',
   stage:busy?'thinking':stopped?'error':t.status==='draft'?(p?'draft':'conversation'):t.status,
   cancelled:/중지|중단/.test(t.error||'')||(!busy&&!!t.pendingGeneration),
-  task:taskFromInput(input?.text,previousQuestion?.text),audience:p?.audience||'',channel:p?.paths?.map(p=>p.title).join(' · ')||'',offer:p?.goal||'',count:t.messages.length};
+  task:taskFromInput(input?.text,previousQuestion?.text),audience:p?.audience||'',channel:p?.paths?.map(p=>p.title).join(' · ')||'',offer:p?.offer||p?.goal||'',firstAction:p?.paths?.[0]?.action||'',tools:p?.paths?.[0]?.tools||[],count:t.messages.length};
 }
