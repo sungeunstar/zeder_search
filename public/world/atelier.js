@@ -60,7 +60,7 @@ export function createAtelier(host){
   if(Math.abs(phase-lastLighting)>.001){renderer.shadowMap.needsUpdate=true;lastLighting=phase;}
 
   grass.wind.value=time;shrubs.wind.value=time;forest.wind.value=time;air.uniforms.time.value=time;air.sky.position.copy(camera.position);shop.update(dt,time,{reduce:reduced.matches});gulls.update(time);
-  if(['walk','receive','think','research','prepare','ready'].includes(shop.debug().activity.action)&&frames%5===0)renderer.shadowMap.needsUpdate=true;
+  if(['walk','receive','think','research','prepare','ready','tidy','stretch','look-sea'].includes(shop.debug().activity.action)&&frames%5===0)renderer.shadowMap.needsUpdate=true;
   const focus=V(5.9,23.7,-1).sub(camera.position).dot(camera.getWorldDirection(V()));lens.uniforms.uFocus.value=focus;lens.uniforms.uAperture.value=mode==='intro'?.26:.62;lens.uniforms.uTime.value=time;lens.render(scene);placeResultPin();frames++;host.dataset.frames=String(frames);
  }
  const pinPosition=V(),raycaster=new T.Raycaster();

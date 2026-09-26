@@ -57,13 +57,16 @@ export function createArtisan(parent,m,obj){
  const documentGroup=new T.Group();root.add(documentGroup);
  const sheet=new T.Mesh(new T.BoxGeometry(.46,.016,.39),new T.MeshStandardMaterial({color:'#f2dec0',roughness:.9}));sheet.rotation.x=.16;documentGroup.add(sheet);
  const seal=new T.Mesh(new T.CylinderGeometry(.04,.04,.02,12),new T.MeshStandardMaterial({color:'#98713d',roughness:.65}));seal.position.set(.11,.019,-.05);documentGroup.add(seal);
+ const clothRag=new T.Mesh(new T.BoxGeometry(.19,.028,.13),new T.MeshStandardMaterial({color:'#e5d9b4',roughness:1}));root.add(clothRag);
  function place(mesh,a,b){const p=V(...a),q=V(...b),length=p.distanceTo(q);mesh.position.copy(p).add(q).multiplyScalar(.5);mesh.scale.y=length/(mesh.userData.restLength||length);mesh.quaternion.setFromUnitVectors(V(0,1,0),q.sub(p).normalize());}
  function update(t,pose){
   const {action='idle',station='desk',carrying=false,speed=0}=pose||{},walk=Math.min(1,speed/2.5),step=t*8.4;
   const onBoard=station==='board'&&['think','read'].includes(action),onShelf=station==='shelf'&&['research','read'].includes(action),writing=action==='think'&&station==='desk',sorting=action==='prepare';
   const holding=carrying||['receive','read','prepare'].includes(action);
   head.rotation.x=onBoard?-.10:holding||writing?.21:.05;
-  head.rotation.y=action==='error'?-.25:Math.sin(t*.6)*.025;
+  head.rotation.y=action==='look-sea'?.32+Math.sin(t*.45)*.16:action==='error'?-.25:Math.sin(t*.6)*.045;
+  if(action==='stretch')head.rotation.x=-.13;
+  clothRag.visible=action==='tidy';
   for(const leg of legs){
    const ph=step+(leg.side>0?Math.PI:0),dz=Math.sin(ph)*.23*walk,lift=Math.max(0,Math.cos(ph))*.12*walk;
    const knee=[leg.x,.56+lift*.36,dz*.52+.025*walk],foot=[leg.x,.25+lift,leg.z+dz];
@@ -78,9 +81,11 @@ export function createArtisan(parent,m,obj){
    if(writing||sorting){hand=[...a.hand];elbow=[...a.elbow];if(a.side===1){hand[0]+=Math.sin(t*4)*.047;hand[2]+=Math.sin(t*2.8)*.027;}}
    if(onBoard&&a.side===1){hand=[.20+Math.sin(t*2.3)*.13,1.72+Math.sin(t*3.1)*.08,.57];elbow=[.39,1.52,.27];}
    if(onShelf&&a.side===1){hand=[.26,1.70+Math.sin(t*1.8)*.025,.56];elbow=[.40,1.46,.24];}
+   if(action==='tidy'){hand=[a.side*.25+Math.sin(t*2.1)*.12,1.245,.70+Math.sin(t*1.6)*.07];elbow=[a.side*.40,1.21,.32];}
+   if(action==='stretch'){hand=[a.side*.43,1.63+Math.sin(t*1.4)*.04,.03];elbow=[a.side*.56,1.48,.02];}
    if(action==='ready'&&a.side===1){hand=[.43,1.10,.38];elbow=[.37,1.20,.19];}
    place(a.upper,a.shoulder,elbow);place(a.lower,elbow,hand);a.cuff.position.set(...elbow);a.palm.position.set(...hand);
-   if(a.side===1){pencil.position.set(hand[0]-.015,hand[1]+.067,hand[2]+.034);pencil.rotation.set(.46,0,-.30);tip.position.set(hand[0]-.053,hand[1]-.019,hand[2]+.088);tip.rotation.set(.46,0,Math.PI-.3);}
+   if(a.side===1){clothRag.position.set(hand[0],hand[1]-.016,hand[2]+.024);pencil.position.set(hand[0]-.015,hand[1]+.067,hand[2]+.034);pencil.rotation.set(.46,0,-.30);tip.position.set(hand[0]-.053,hand[1]-.019,hand[2]+.088);tip.rotation.set(.46,0,Math.PI-.3);}
   }
  }
  update(0,{});return {root,update};

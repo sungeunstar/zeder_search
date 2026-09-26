@@ -29,6 +29,7 @@ export function validatePlan(p) {
   });
   if (!Array.isArray(p.assumptions) || p.assumptions.length > 6) throw new Error('가정을 확인해 주세요.');
   result.assumptions = p.assumptions.map(v => requireText(v, 'assumption', 500));
+  for (const key of ['offer','channel','nextDecision']) if(p[key]!==undefined) result[key]=requireText(p[key],key,1200);
   return result;
 }
 export function validateReply(reply) {
@@ -88,7 +89,7 @@ export function requestRevision(thread, note) {
   return thread;
 }
 export function demoReply(messages, priorPlan = null) {
-  const users = messages.filter(m => m.role === 'user'); const text = users.map(m => m.text).join(' '); const last = users.at(-1)?.text ?? '';
+  const users = messages.filter(m => m.role === 'user' && !/^(안녕하세요|안녕|반가워요|네|응)[.!\s]*$/.test(m.text)); if(!users.length)return {reply:'어떤 제품이나 서비스를 알리고 싶으세요?',quickReplies:[],plan:null}; const text = users.map(m => m.text).join(' '); const last = users.at(-1)?.text ?? '';
   if (priorPlan) {
     if (/수정|바꿔|변경|줄여|예산|광고.*없이|다시/.test(last)) {
       const plan = clone(priorPlan); plan.budget = /무료|없이|0원/.test(last) ? '유료 광고 없이 시작 (제안)' : plan.budget;

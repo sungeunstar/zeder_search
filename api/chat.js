@@ -1,5 +1,6 @@
 import { timingSafeEqual, createHash } from 'node:crypto';
 import { generate, parseInput } from '../lib/llm.js';
+import {parseReviewInput,generateReview} from '../lib/marketer.js';
 const windows = new Map();
 export const configured = env => Boolean(env.OPENAI_API_KEY && env.OPENAI_MODEL && env.ZEDER_PREVIEW_KEY?.length >= 16);
 const equal = (a,b) => { const x=Buffer.from(a ?? ''), y=Buffer.from(b ?? ''); return x.length===y.length && timingSafeEqual(x,y); };
@@ -25,8 +26,8 @@ export default async function handler(req,res) {
     if (!body) { let size=0, chunks=[]; for await(const c of req) { size+=c.length; if(size>40000) return reply(res,413,{error:'대화가 너무 길어요. 새 대화를 시작해 주세요.'}); chunks.push(c); } body=Buffer.concat(chunks).toString(); }
     if (typeof body==='string') { if(Buffer.byteLength(body)>40000) return reply(res,413,{error:'대화가 너무 길어요.'}); body=JSON.parse(body); }
     if (Buffer.byteLength(JSON.stringify(body))>40000) return reply(res,413,{error:'대화가 너무 길어요.'});
-    body=parseInput(body);
+    body=body?.intent==='marketer_review'?parseReviewInput(body):parseInput(body);
   } catch (e) { return reply(res,400,{error:e instanceof SyntaxError?'잘못된 JSON입니다.':e.message}); }
-  try { return reply(res,200,await generate(body,env)); }
+  try { return reply(res,200,await (body.intent==='marketer_review'?generateReview(body,env):generate(body,env))); }
   catch(e) { return reply(res,502,{error:e.name==='TimeoutError'?'응답 시간이 초과됐어요. 다시 시도해 주세요.':e.message}); }
 }
