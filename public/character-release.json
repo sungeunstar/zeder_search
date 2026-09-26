@@ -1,0 +1,1 @@
+{"revision":"rigged-character-v3","asset":"Quaternius CC0 Farmer","model":"models/maker.glb","sha256":"6fde0b72da1bc236aff038f41faa543422f4e3ba50dbd32becc424a5fc718659","scope":"character-only","changes":["skinned-mesh","artist-idle-walk","bounded-work-poses","normalized-crossfades","wrist-attached-props","no-forced-sitting"]}

@@ -1,6 +1,8 @@
 import './prepare-surfaces.mjs';
 import { vendorThree } from './vendor.mjs';
 await vendorThree();
+import {prepareCharacter} from './prepare-character.mjs';
+await prepareCharacter();
 import { cp, mkdir, rm, readdir } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 for(const dir of ['public','public/world','api','lib']) for(const f of await readdir(dir)) if(f.endsWith('.js')) { const r=spawnSync(process.execPath,['--check',`${dir}/${f}`],{stdio:'inherit'});if(r.status)process.exit(r.status); }

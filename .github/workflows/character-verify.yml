@@ -1,0 +1,30 @@
+name: Verify rigged workshop character
+on:
+  push:
+    branches: [fix/rigged-workshop-character]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts --no-audit
+      - run: npm test
+      - run: npm run build
+      - run: npm install --no-save --ignore-scripts --no-audit playwright@1.55.1
+      - run: npx playwright install --with-deps chromium
+      - run: node tests/rigged-character-browser.mjs
+      - run: node tests/browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rigged-character-validation
+          path: |
+            character-qa
+            preview-artifacts
+          retention-days: 3
