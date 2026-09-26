@@ -1,40 +1,45 @@
-// Genuine HTTP/native storage + Three.js. No API/renderer mocks.
-import {chromium} from 'playwright';
-import {spawn} from 'node:child_process';
-import {mkdir,writeFile} from 'node:fs/promises';
+// Native HTTP/localStorage suite for CI or a developer machine.
+// The bundled offline QA in the delivery is separate; it does not claim this suite ran.
+import { chromium } from 'playwright';
+import { spawn } from 'node:child_process';
+import { mkdir, writeFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
-const out='browser-artifacts';await mkdir(out,{recursive:true});
-const url=process.env.BASE_URL||'http://127.0.0.1:3210';
+const out='browser-artifacts'; await mkdir(out,{recursive:true});
+const url=process.env.BASE_URL || 'http://127.0.0.1:3210';
 const server=process.env.BASE_URL?null:spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:'3210'},stdio:'inherit'});
-let browser;const errors=[],checks=[];const ok=s=>{checks.push(s);console.log('PASS',s);};
-try{
- for(let i=0;i<50;i++){try{if((await fetch(url)).ok)break;}catch{}await new Promise(r=>setTimeout(r,200));}
- if(process.env.EXPECT_COMMIT){const info=await(await fetch(url+'/build-info.json')).json();assert.equal(info.commit,process.env.EXPECT_COMMIT);ok('Production serves the expected application commit');}
- browser=await chromium.launch({headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader','--disable-dev-shm-usage']});
- const context=await browser.newContext({viewport:{width:1100,height:760},reducedMotion:'reduce'});const page=await context.newPage();page.setDefaultTimeout(60000);page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
- await page.goto(url,{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>!!window.zederWorld);
- let d=await page.evaluate(()=>zederWorld.debug());assert.equal(d.revision,'169');assert.equal(d.scene,'seaside-workshop');assert.match(d.webgl,/WebGL 2/);assert.equal(d.workshop.pose,'state-driven-artisan');assert.equal(d.workshop.activity.action,'idle');assert.equal(d.water.waves,12);ok('Actual Three.js scene, TOMOB ocean and state-driven artisan boot');
- for(const preset of ['day','night','sunset']){await page.locator(`[data-time="${preset}"]`).click();d=await page.evaluate(()=>zederWorld.debug());assert.equal(d.timeOfDay,preset);if(preset==='night')assert.equal(d.night,1);await page.screenshot({path:`${out}/${preset}.png`});}
- ok('All three lighting presets still work');
- const locked=await page.evaluate(()=>zederWorld.debug().camera);await page.mouse.move(20,200);await page.waitForTimeout(200);assert.deepEqual(await page.evaluate(()=>zederWorld.debug().camera),locked);ok('Reduced motion locks camera and character');
- await page.setViewportSize({width:800,height:600});await page.emulateMedia({reducedMotion:'no-preference'});await page.waitForFunction(()=>!zederWorld.debug().paused,null,{polling:150});await page.mouse.move(790,200);await page.waitForFunction(()=>zederWorld.debug().pointer[0]>.6);const right=await page.evaluate(()=>zederWorld.debug().camera);
- await page.mouse.move(12,180);await page.waitForFunction(()=>zederWorld.debug().pointer[0]<-.6);await page.waitForFunction(x=>Math.abs(zederWorld.debug().camera[0]-x)>4,right[0]);const left=await page.evaluate(()=>zederWorld.debug().camera);assert.ok(Math.abs(right[0]-left[0])>4);ok('Real mouse movement exposes a wider side view');
- await page.evaluate(()=>{zederWorld.skip();if(!zederWorld.debug().paused)zederWorld.togglePause();});
- await page.locator('#message').fill('작은 스튜디오를 운영해요. 타깃을 정하고 첫 고객을 만나고 싶어요.');await page.locator('[type=submit]').click();await page.locator('.quick-replies button').first().waitFor();
- let a=await page.evaluate(()=>zederWorld.debug().workshop.activity);assert.equal(a.task,'audience');assert.equal(a.state,'awaiting_input');assert.equal(a.resultAvailable,false);const initial=a.position;
- await page.evaluate(()=>zederWorld.advance(1.4));a=await page.evaluate(()=>zederWorld.debug().workshop.activity);assert.equal(a.action,'walk');assert.notDeepEqual(a.position,initial);await page.screenshot({path:`${out}/walking.png`});
- await page.evaluate(()=>zederWorld.advance(6));a=await page.evaluate(()=>zederWorld.debug().workshop.activity);assert.equal(a.station,'board');assert.equal(a.action,'wait');await page.screenshot({path:`${out}/board.png`});ok('Submitted input moves the articulated character along the aisle to the board');
- const box=await page.locator('.conversation-dock').boundingBox();assert.ok(Math.abs(box.x+box.width/2-400)<5);assert.ok(box.height<600*.44);assert.equal(await page.locator('.strategy-board').count(),0);ok('Conversation stays bottom-centered without an automatic dashboard');
- await page.locator('.quick-replies button').filter({hasText:'작은 팀'}).click();await page.locator('.quick-replies button').filter({hasText:'10만원'}).click();await page.locator('[data-action=show-result]').waitFor();a=await page.evaluate(()=>zederWorld.debug().workshop.activity);assert.equal(a.resultAvailable,true);assert.equal(a.processing,false);
- await page.evaluate(()=>zederWorld.advance(1.5));await page.screenshot({path:`${out}/carrying.png`});await page.evaluate(()=>zederWorld.advance(12));a=await page.evaluate(()=>zederWorld.debug().workshop.activity);assert.equal(a.station,'desk');assert.equal(a.action,'wait');ok('A real plan creates a document; carry/delivery never pretends the API is still computing');
- await page.locator('#workbench-result').click();await page.locator('dialog .strategy-board').waitFor();assert.equal(await page.locator('dialog .path-card').count(),3);await page.screenshot({path:`${out}/document.png`});await page.locator('dialog [data-action=close-modal]').first().click();ok('Physical workbench marker opens the actual versioned strategy');
- await page.locator('[data-action=show-result]').click();await page.locator('dialog [data-action=revise-chat]').click();assert.equal(await page.locator('dialog').evaluate(d=>d.open),false);await page.locator('#message').fill('');ok('Editing a result returns to the unobstructed conversation');
- await page.locator('#message').fill('콘텐츠 문구를 다듬어줘');await page.evaluate(()=>{document.querySelector('form[data-form=chat]').requestSubmit();document.querySelector('[data-action=stop]')?.click();});await page.locator('.chat-error').waitFor();a=await page.evaluate(()=>zederWorld.debug().workshop.activity);assert.equal(a.action,'cancelled');const stopped=a.position;await page.evaluate(()=>zederWorld.advance(8));assert.deepEqual(await page.evaluate(()=>zederWorld.debug().workshop.activity.position),stopped);ok('Stop interrupts the animation and preserves the existing real result');
- await page.locator('[data-action=retry]').click();await page.locator('[data-action=show-result]').waitFor();await page.evaluate(()=>zederWorld.advance(20));assert.equal(await page.evaluate(()=>zederWorld.debug().workshop.activity.task),'content');ok('Retry responds to the new input task without stale completion');
- await page.locator('[data-action=history]').click();assert.ok(await page.locator('dialog .user-bubble').count()>0);await page.locator('dialog [data-action=close-modal]').first().click();ok('Full conversation history remains available on demand');
- await page.locator('[data-action=show-result]').click();await page.locator('dialog [data-action=request]').click();await page.locator('[data-action=confirm-request]').click();await page.locator('.dock-review').waitFor();assert.ok(await page.locator('#world-host').isVisible());assert.equal(await page.evaluate(()=>zederWorld.debug().workshop.activity.state),'review_wait');await page.locator('.dock-review').click();await page.locator('.studio-sidebar').waitFor();assert.ok(await page.locator('#world-host').isHidden());ok('Review waiting is honest and marketer studio remains separate');
- await page.locator('input[name=title]').fill('동네 고객과 직접 대화하기');await page.locator('textarea[name=review-note]').fill('고객과 대화할 제안을 구체화해주세요.');await page.locator('form[data-form=review] [type=submit]').click();await page.locator('.detail-title a').click();await page.locator('[data-action=approve]').click();assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('zeder-search.chat-first.v2')).threads[0].status),'preparing');ok('Human review and explicit approval still preserve version boundaries');
- await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>!!window.zederWorld);assert.equal(await page.evaluate(()=>zederWorld.debug().workshop.activity.state),'approved');assert.equal(await page.evaluate(()=>zederWorld.debug().workshop.activity.action),'wait');ok('Reload restores real status without replaying a fictitious job');await page.screenshot({path:`${out}/chat.png`});await context.close();
- const mobile=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true,reducedMotion:'reduce'});mobile.on('pageerror',e=>errors.push(e.message));await mobile.goto(url,{waitUntil:'domcontentloaded'});await mobile.waitForFunction(()=>!!window.zederWorld);await mobile.locator('#message').fill('첫 고객을 찾고 싶어요');await mobile.locator('[type=submit]').click();await mobile.locator('.quick-replies button').first().waitFor();assert.ok(await mobile.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));const mb=await mobile.locator('.conversation-dock').boundingBox();assert.ok(mb.y>420);await mobile.screenshot({path:`${out}/mobile.png`});ok('Mobile keeps the workshop visible above the compact conversation');
- assert.deepEqual(errors,[]);ok('No JavaScript, shader or CSP console errors');
-}finally{await browser?.close();server?.kill();await writeFile(`${out}/results.json`,JSON.stringify({url,checks,errors,method:'Real HTTP/native storage, actual Chromium WebGL. Animation checkpoints use deterministic stepping; they are not a real-time FPS benchmark.'},null,2));}
+let browser; const errors=[],checks=[];
+const ok=message=>{checks.push(message);console.log('PASS',message);};
+try {
+  let reachable=false;
+  for(let i=0;i<50;i++){try{if((await fetch(url)).ok){reachable=true;break;}}catch{}await new Promise(r=>setTimeout(r,200));}
+  assert.ok(reachable,'Test URL did not start');
+  if(process.env.EXPECT_REVISION){const info=await(await fetch(url+'/build-info.json')).json();assert.equal(info.revision,process.env.EXPECT_REVISION);}
+  const config=await(await fetch(url+'/api/chat')).json();assert.equal(config.mode,'demo','This regression suite must not make paid model calls');
+  browser=await chromium.launch({headless:process.env.HEADED!=='1',args:['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader','--disable-dev-shm-usage']});
+  const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});
+  const page=await context.newPage();page.setDefaultTimeout(60000);
+  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  await page.goto(url,{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>!!window.zederWorld);
+  const world=await page.evaluate(()=>zederWorld.debug());assert.equal(world.scene,'seaside-workshop');assert.equal(world.water.waves,12);ok('Real Three.js workshop and TOMOB water render');
+  for(const preset of ['day','night','sunset']){await page.locator(`[data-time="${preset}"]`).click();assert.equal(await page.evaluate(()=>zederWorld.debug().timeOfDay),preset);}ok('Time presets retained');
+  await page.locator('#message').fill('노원에서 필라테스 스튜디오를 운영해요. 첫 회원을 모으고 싶어요. 고객은 근처 직장인이에요. 예산은 10만원이에요.');
+  await page.locator('[data-form=chat] [type=submit]').click();await page.locator('[data-action=show-result]').waitFor();
+  await page.screenshot({path:`${out}/conversation.png`});await page.locator('[data-action=show-result]').click();
+  await page.locator('.sg-customer').waitFor();assert.equal(await page.locator('.sg-first-action').count(),1);await page.screenshot({path:`${out}/first-experiment.png`});ok('One hypothesis, one first action');
+  await page.locator('[data-action=request]').click();await page.locator('.dock-review').waitFor();assert.equal(await page.locator('#dialog').evaluate(el=>el.open),false);ok('Customer request has no duplicate confirmation');
+  await page.locator('.dock-review').click();await page.locator('[data-form=single-review]').waitFor();
+  for(const field of ['business','goal','budget'])assert.equal(await page.locator(`[name=${field}]`).count(),0);
+  await page.screenshot({path:`${out}/marketer-report.png`});ok('Source evidence precedes editable report and is read-only');
+  const hypothesis=await page.locator('[name=hypothesis]').inputValue();await page.locator('[name=hypothesis]').fill('');await page.locator('[name=review-note]').fill('검토 중');await page.waitForTimeout(600);
+  await page.reload({waitUntil:'domcontentloaded'});await page.locator('[name=hypothesis]').waitFor();assert.equal(await page.locator('[name=hypothesis]').inputValue(),'');ok('Incomplete edits survive native browser reload');
+  await page.locator('[name=hypothesis]').fill(hypothesis);await page.locator('[name=audience]').fill('평일 저녁 운동이 필요한 스튜디오 인근 직장인 · 검증 전 가설');await page.locator('[name=review-note]').fill('방문 가능한 거리와 시간대로 고객 후보를 좁혔습니다. 예산은 바꾸지 않고 실제 상담 문의를 확인하는 실행으로 진행하세요.');
+  await page.locator('[data-form=single-review] [type=submit]').click();await page.locator('.sg-report-status').filter({hasText:'전달 완료'}).waitFor();assert.equal(await page.locator('#dialog').evaluate(el=>el.open),false);ok('Single direct review delivery');
+  await page.locator('.sg-send-bar a').click();await page.locator('[data-action=show-result]').click();await page.locator('.sg-feedback').waitFor();assert.equal(await page.locator('[data-action=approve]').count(),0);assert.ok(await page.locator('.sg-diff').count()>0);await page.screenshot({path:`${out}/reviewed.png`});ok('Feedback and changes shown without another human gate');
+  await page.locator('.sg-tool[data-action=artifact]').first().click();await page.locator('.artifact-preview').waitFor();assert.match(await page.locator('.artifact-preview').innerText(),/실제 조사/);ok('Preparation creates a local template, not external action');
+  await page.setViewportSize({width:390,height:844});await page.locator('#dialog [data-action=show-result]').click();await page.locator('.sg-customer').waitFor();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:`${out}/mobile-result.png`});
+  const id=(await page.evaluate(()=>location.hash)).split('/').at(-1);await page.goto(url+'/#/studio/'+id);await page.locator('.sg-report').waitFor();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:`${out}/mobile-report.png`});ok('Responsive customer and marketer documents');
+  assert.deepEqual(errors,[]);ok('No captured JavaScript, shader or CSP errors');
+} finally {
+  await browser?.close();server?.kill();
+  await writeFile(`${out}/results.json`,JSON.stringify({url,checks,errors,method:'Native HTTP and browser storage, actual Chromium WebGL. No simulated API/model/renderer responses.'},null,2));
+}
