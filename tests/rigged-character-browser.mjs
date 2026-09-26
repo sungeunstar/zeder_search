@@ -17,5 +17,47 @@ try{
   worker.update(.05,time,modes.idle);const at=worker.debug();worker.update(0,time,modes.idle);if(JSON.stringify(at)!==JSON.stringify(worker.debug()))throw Error('Paused pose changed');worker.dispose();return checks;
  });
  for(const c of report){assert.ok(c.maxDeviation<.035,`${c.mode}: arm length changed ${c.maxDeviation}`);assert.ok(c.maxBlendError<1e-6);assert.ok(c.size.every(Number.isFinite));assert.ok(c.size[1]>.9&&c.size[1]<2.4);assert.ok(c.skinMeshes>0);}
+
+ const contacts=await page.evaluate(async()=>{
+ const T=await import('/vendor/three.module.js'),{createMaker}=await import('/world/rigged-maker.js'),V=(...a)=>new T.Vector3(...a);
+ const parent=new T.Group(),worker=createMaker(parent),{bones,book}=worker.inspect();
+ const modes={write:{action:'think',station:'desk'},read:{action:'read',station:'shelf'},carry:{action:'walk',station:'desk',speed:.76,carrying:true}};
+ const checks=[];let clock=0;
+ for(const name of ['write','read','carry']){
+  for(let i=0;i<120;i++){clock+=1/30;worker.update(1/30,clock,modes[name]);}
+  let minTipY=9,maxTipY=-9,maxPenGripGap=0,maxDepth=0,interiorVertices=0;
+  for(let sample=0;sample<8;sample++){
+   for(let i=0;i<18;i++){clock+=1/30;worker.update(1/30,clock,modes[name]);}
+   parent.updateMatrixWorld(true);const d=worker.debug();
+   if(name==='write'){
+    minTipY=Math.min(minTipY,d.penTip[1]);maxTipY=Math.max(maxTipY,d.penTip[1]);
+    maxPenGripGap=Math.max(maxPenGripGap,V(...d.fingerTips.Index4R).distanceTo(V(...d.fingerTips.Thumb3R)));
+   }else{
+    for(const mesh of worker.model.getObjectsByProperty('isSkinnedMesh',true)){
+     const pos=mesh.geometry.attributes.position,indices=mesh.geometry.attributes.skinIndex,weights=mesh.geometry.attributes.skinWeight;
+     for(let i=0;i<pos.count;i++){
+      let handWeight=0;for(let k=0;k<4;k++)if(/Index|Middle|Ring|Pinky|Thumb/.test(mesh.skeleton.bones[indices.getComponent(i,k)]?.name))handWeight+=weights.getComponent(i,k);
+      if(handWeight<.5)continue;
+      const v=V().fromBufferAttribute(pos,i);mesh.applyBoneTransform(i,v);mesh.localToWorld(v);book.worldToLocal(v);
+      // Conservative cover volume, including the pages. 2 mm tolerance for surface contact.
+      const depth=Math.min(.175-Math.abs(v.x),.1225-Math.abs(v.y),.019-Math.abs(v.z));
+      if(depth>.002){interiorVertices++;maxDepth=Math.max(maxDepth,depth);}
+     }
+    }
+   }
+  }
+  checks.push({mode:name,minTipY:name==='write'?minTipY:null,maxTipY:name==='write'?maxTipY:null,maxPenGripGap,interiorVertices,maxDepth});
+ }
+ worker.dispose();return checks;
+});
+ for(const c of contacts){
+  if(c.mode==='write'){
+   assert.ok(c.minTipY>=1.254&&c.maxTipY<=1.273,`Writing nib left paper plane: ${JSON.stringify(c)}`);
+   assert.ok(c.maxPenGripGap<.028,`Fingers do not pinch the pen: ${c.maxPenGripGap}`);
+  }else assert.equal(c.interiorVertices,0,`${c.mode}: fingers enter the book interior: ${JSON.stringify(c)}`);
+ }
+ await writeFile(`${out}/contacts.json`,JSON.stringify(contacts,null,2));
+ console.log('PASS: writing nib stays on/just above paper; closed pinch; read and walking-carry grips avoid book interior at 8 sampled times.');
+
  for(const mode of ['idle','write','carry','board']){await page.locator(`[data-motion=${mode}]`).click();await page.evaluate(m=>{zederCharacterCheck.setMode(m);for(let i=0;i<8;i++)zederCharacterCheck.step(.1);},mode);await page.screenshot({path:`${out}/${mode}.png`});}await page.setViewportSize({width:390,height:844});await page.screenshot({path:`${out}/mobile.png`});assert.deepEqual(errors,[]);await writeFile(`${out}/checks.json`,JSON.stringify({base,checks:report,errors},null,2));console.log('PASS: 9 skeletal transitions, fixed arm lengths, finite bones, blend normalization, pause, mobile.');
 }finally{await browser?.close();server?.kill();}
