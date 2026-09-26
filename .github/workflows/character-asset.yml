@@ -2,31 +2,34 @@ name: Prepare rigged workshop character
 on:
   push:
     branches: [fix/rigged-workshop-character]
-    paths: [.github/workflows/character-asset.yml]
+    paths: [.github/workflows/character-asset.yml, scripts/prepare-character.mjs]
 permissions:
   contents: read
 jobs:
   asset:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - run: pip install gdown==5.2.0
-      - name: Download CC0 rigged model from artist distribution
-        run: |
-          mkdir -p character-asset
-          python3 - <<'PY'
-          import gdown,pathlib,zipfile
-          entries=gdown.download_folder('https://drive.google.com/drive/folders/1USAAquX2JJWuA2m6zol0KUkFe3UkZ8zX',skip_download=True,quiet=False)
-          print(entries)
-          for e in entries:
-              if any(k in e.path.lower() for k in ['gltf','glb']):
-                  f=gdown.download(id=e.id,output='character-asset/'+pathlib.Path(e.path).name,quiet=False)
-                  print('downloaded',f)
-          PY
-      - uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: workshop-character-source
-          path: character-asset
-          retention-days: 3
+          ref: fix/rigged-workshop-character
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pip install gdown==5.2.0
+      - name: Obtain the single hash-pinned artist model
+        run: |
+          python3 - <<'PY'
+          import gdown
+          gdown.download(id='1B9Dln-oR5Yk6sdsDR3yHCw86LobAN3Zd',output='/tmp/Farmer.gltf',quiet=True)
+          PY
+          CHARACTER_SOURCE=/tmp/Farmer.gltf node --input-type=module -e "import {prepareCharacter} from './scripts/prepare-character.mjs'; await prepareCharacter();"
+      - name: Save verified model to this feature branch only
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/models/maker.glb
+          git diff --cached --quiet || git commit -m 'asset: add verified CC0 rigged workshop model'
+          git push origin HEAD:fix/rigged-workshop-character
