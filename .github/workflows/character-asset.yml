@@ -1,0 +1,32 @@
+name: Prepare rigged workshop character
+on:
+  push:
+    branches: [fix/rigged-workshop-character]
+    paths: [.github/workflows/character-asset.yml]
+permissions:
+  contents: read
+jobs:
+  asset:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch public CC0 artist page and download references
+        run: |
+          mkdir -p character-asset
+          python3 - <<'PY'
+          import urllib.request, re, json, pathlib
+          out=pathlib.Path('character-asset')
+          for key,url in [('farmer','https://poly.pizza/m/7pn3R6hPvE'),('artist','https://quaternius.com/packs/ultimatemodularcharacters.html')]:
+              req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'})
+              text=urllib.request.urlopen(req,timeout=30).read().decode()
+              (out/(key+'.html')).write_text(text)
+              print(key, text[-16000:])
+              urls=re.findall(r'https?[^\s\"<>]+',text)
+              (out/(key+'-urls.json')).write_text(json.dumps(urls))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: workshop-character-source
+          path: character-asset
+          retention-days: 3
