@@ -8,18 +8,21 @@ permissions:
 jobs:
   asset:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Read original CC0 artist download references
+      - run: pip install gdown==5.2.0
+      - name: Download CC0 rigged model from artist distribution
         run: |
           mkdir -p character-asset
           python3 - <<'PY'
-          import urllib.request,re,pathlib
-          url='https://quaternius.com/packs/ultimatemodularcharacters.html'
-          text=urllib.request.urlopen(url,timeout=30).read().decode()
-          pathlib.Path('character-asset/artist.html').write_text(text)
-          print('\n'.join(line for line in text.splitlines() if any(k in line.lower() for k in ['download','href=','drive.google','dropbox'])))
+          import gdown,pathlib,zipfile
+          entries=gdown.download_folder('https://drive.google.com/drive/folders/1USAAquX2JJWuA2m6zol0KUkFe3UkZ8zX',skip_download=True,quiet=False)
+          print(entries)
+          for e in entries:
+              if any(k in e.path.lower() for k in ['gltf','glb']):
+                  f=gdown.download(id=e.id,output='character-asset/'+pathlib.Path(e.path).name,quiet=False)
+                  print('downloaded',f)
           PY
       - uses: actions/upload-artifact@v4
         if: always()
